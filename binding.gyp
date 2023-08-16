@@ -35,30 +35,6 @@
                     "library_dirs": [ "<(ndi_dir)/lib/win-x64" ]
                 }
             } ],
-            [ "OS == 'linux' and target_arch == 'ia32'", {
-                "copies": [ {
-                    "destination":  "build/Release",
-                    "files":        [ "<(ndi_dir)/lib/lnx-x86/libndi.so",
-                                      "<(ndi_dir)/lib/lnx-x86/libndi.so.5",
-                                      "<(ndi_dir)/lib/lnx-x86/libndi.so.5.6.0" ]
-                } ],
-                "link_settings": {
-                    "libraries":    [ "-Wl,-rpath,'$$ORIGIN'", "-lndi" ],
-                    "library_dirs": [ "<(ndi_dir)/lib/lnx-x86" ]
-                }
-            } ],
-            [ "OS == 'linux' and target_arch == 'x64'", {
-                "copies": [ {
-                    "destination":  "build/Release",
-                    "files":        [ "<(ndi_dir)/lib/lnx-x64/libndi.so",
-                                      "<(ndi_dir)/lib/lnx-x64/libndi.so.5",
-                                      "<(ndi_dir)/lib/lnx-x64/libndi.so.5.6.0" ]
-                } ],
-                "link_settings": {
-                    "libraries":    [ "-Wl,-rpath,'$$ORIGIN'", "-lndi" ],
-                    "library_dirs": [ "<(ndi_dir)/lib/lnx-x64" ]
-                }
-            } ],
             [ "OS == 'mac' and target_arch == 'x64'", {
                 "copies": [ {
                     "destination":  "build/Release",
