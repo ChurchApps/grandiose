@@ -76,7 +76,7 @@ const tmp       = require("tmp")
     }
     else if (os.platform() === "darwin") {
         /*  download NDI SDK distribution  */
-        const url1 = "https://downloads.ndi.tv/SDK/NDI_SDK_Mac/Install_NDI_SDK_v5_macOS.pkg"
+        const url1 = "https://downloads.ndi.tv/SDK/NDI_SDK_Mac/Install_NDI_SDK_v5_Apple.pkg"
         console.log("-- dowloading NDI SDK distribution")
         const data1 = await got(url1, { responseType: "buffer" })
         const file1 = tmp.tmpNameSync()
@@ -95,9 +95,9 @@ const tmp       = require("tmp")
         console.log("-- assembling NDI SDK subset")
         shell.rm("-rf", "ndi")
         shell.mkdir("-p", "ndi/include")
-        shell.mkdir("-p", "ndi/lib/mac-x64")
-        shell.mv(path.join(dir1, "NDI SDK for macOS/include/*.h"), "ndi/include/")
-        shell.mv(path.join(dir1, "NDI SDK for macOS/lib/macOS/*.dylib"), "ndi/lib/mac-x64/")
+        shell.mkdir("-p", "ndi/lib/mac")
+        shell.mv(path.join(dir1, "NDI SDK for Apple/include/*.h"), "ndi/include/")
+        shell.mv(path.join(dir1, "NDI SDK for Apple/lib/macOS/*.dylib"), "ndi/lib/mac/")
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
@@ -139,4 +139,3 @@ const tmp       = require("tmp")
 })().catch((err) => {
     console.log(`** ERROR: ${err}`)
 })
-
