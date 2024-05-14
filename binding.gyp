@@ -1,7 +1,6 @@
 {
     "variables": {
-      "ndi_dir": "<(module_root_dir)/ndi",
-      "openssl_fips": ""
+      "ndi_dir": "<(module_root_dir)/ndi"
     },
     "targets": [ {
         "target_name": "grandiose",
@@ -40,7 +39,7 @@
                     "destination":  "build/Release",
                     "files":        [ "<(ndi_dir)/lib/lnx-x86/libndi.so",
                                       "<(ndi_dir)/lib/lnx-x86/libndi.so.5",
-                                      "<(ndi_dir)/lib/lnx-x86/libndi.so.5.6.1" ]
+                                      "<(ndi_dir)/lib/lnx-x86/libndi.so.5.1.1" ]
                 } ],
                 "link_settings": {
                     "libraries":    [ "-Wl,-rpath,'$$ORIGIN'", "-lndi" ],
@@ -52,21 +51,21 @@
                     "destination":  "build/Release",
                     "files":        [ "<(ndi_dir)/lib/lnx-x64/libndi.so",
                                       "<(ndi_dir)/lib/lnx-x64/libndi.so.5",
-                                      "<(ndi_dir)/lib/lnx-x64/libndi.so.5.6.1" ]
+                                      "<(ndi_dir)/lib/lnx-x64/libndi.so.5.1.1" ]
                 } ],
                 "link_settings": {
                     "libraries":    [ "-Wl,-rpath,'$$ORIGIN'", "-lndi" ],
                     "library_dirs": [ "<(ndi_dir)/lib/lnx-x64" ]
                 }
             } ],
-            [ "OS == 'mac' and target_arch == 'x64'", {
+            [ "OS == 'mac' and (target_arch == 'x64' or target_arch == 'arm64')", {
                 "copies": [ {
                     "destination":  "build/Release",
-                    "files":        [ "<(ndi_dir)/lib/mac-x64/libndi.dylib" ]
+                    "files":        [ "<(ndi_dir)/lib/mac/libndi.dylib" ]
                 } ],
                 "link_settings": {
                     "libraries":    [ "-Wl,-rpath,@loader_path", "-lndi" ],
-                    "library_dirs": [ "<(ndi_dir)/lib/mac-x64" ]
+                    "library_dirs": [ "<(ndi_dir)/lib/mac" ]
                 }
             } ]
         ]
