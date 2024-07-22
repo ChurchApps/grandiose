@@ -12,7 +12,7 @@
     "bugs":        { "url": "https://github.com/Streampunk/grandiose/issues" },
     "dependencies": {
         "bindings":         "1.5.0",
-        "got":              "11.8.6",
+        "got":              "13.0.0",
         "mkdirp":           "1.0.4",
         "tmp":              "0.2.1",
         "execa":            "5.1.1",
@@ -23,7 +23,7 @@
         "shx":              "0.3.4"
     },
     "scripts": {
-        "install":          "node ndi.js && node-gyp rebuild",
+        "install":          "node ndi.mjs && node-gyp rebuild",
         "build":            "node-gyp rebuild",
         "test":             "node scratch/scratchVersion.js",
         "clean":            "shx rm -rf ndi build"

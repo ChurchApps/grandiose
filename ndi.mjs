@@ -15,15 +15,15 @@
 */
 
 /*  external requirements  */
-const fs        = require("fs")
-const path      = require("path")
-const os        = require("os")
-const shell     = require("shelljs")
-const execa     = require("execa")
-const zip       = require("cross-zip")
-const got       = require("got")
-const mkdirp    = require("mkdirp")
-const tmp       = require("tmp")
+import fs        from "fs"
+import path      from "path"
+import os        from "os"
+import shell     from "shelljs"
+import execa     from "execa"
+import zip       from "cross-zip"
+import got       from "got"
+import mkdirp    from "mkdirp"
+import tmp       from "tmp"
 
 /*  establish asynchronous environment  */
 ;(async () => {
@@ -98,6 +98,7 @@ const tmp       = require("tmp")
         shell.mkdir("-p", "ndi/lib/mac")
         shell.mv(path.join(dir1, "NDI SDK for Apple/include/*.h"), "ndi/include/")
         shell.mv(path.join(dir1, "NDI SDK for Apple/lib/macOS/*.dylib"), "ndi/lib/mac/")
+        shell.mv(path.join(dir1, "NDI SDK for Apple/lib/macOS/libndi_licenses.txt"), "ndi/lib/mac/")
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
@@ -127,9 +128,13 @@ const tmp       = require("tmp")
         shell.mkdir("-p", "ndi/include")
         shell.mkdir("-p", "ndi/lib/lnx-x86")
         shell.mkdir("-p", "ndi/lib/lnx-x64")
+        shell.mkdir("-p", "ndi/lib/lnx-armv7l")
+        shell.mkdir("-p", "ndi/lib/lnx-arm64")
         shell.mv(path.join(dir1, "NDI SDK for Linux/include/*.h"), "ndi/include/")
         shell.mv(path.join(dir1, "NDI SDK for Linux/lib/i686-linux-gnu/*"),   "ndi/lib/lnx-x86/")
         shell.mv(path.join(dir1, "NDI SDK for Linux/lib/x86_64-linux-gnu/*"), "ndi/lib/lnx-x64/")
+        shell.mv(path.join(dir1, "NDI SDK for Linux/lib/arm-rpi4-linux-gnueabihf/*"), "ndi/lib/lnx-armv7l/")
+        shell.mv(path.join(dir1, "NDI SDK for Linux/lib/aarch64-rpi4-linux-gnueabi/*"), "ndi/lib/lnx-arm64/")
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
