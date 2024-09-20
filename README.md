@@ -15,7 +15,7 @@ of the original [Streampunk Grandiose](https://github.com/Streampunk/grandiose) 
 The differences against the original codebase are:
 
 - audio frame sending support from the [rse/grandiose](https://github.com/rse/grandiose) fork.
-- ad-hoc download of NDI SDK 5.0.0 from the [rse/grandiose](https://github.com/rse/grandiose) fork.
+- ad-hoc download of NDI SDK 6.0.1 from the [rse/grandiose](https://github.com/rse/grandiose) fork.
 - portability fixes for clean compile under Windows, macOS and Linux from the [rse/grandiose](https://github.com/rse/grandiose) fork.
 - portability fixes for macOS from the [danjenkins/grandiose](https://github.com/danjenkins/grandiose) fork.
 - NDI Sender functionality from the [ianshade/grandiose](https://github.com/ianshade/grandiose) fork.
