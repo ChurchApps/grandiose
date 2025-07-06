@@ -58,7 +58,7 @@
                     "library_dirs": [ "<(ndi_dir)/lib/lnx-x64" ]
                 }
             } ],
-            [ "OS == 'linux' and target_arch == 'a64'", {
+            [ "OS == 'linux' and target_arch == 'arm64'", {
                 "copies": [ {
                     "destination":  "build/Release",
                     "files":        [ "<(ndi_dir)/lib/lnx-a64/libndi.so",
@@ -70,7 +70,7 @@
                     "library_dirs": [ "<(ndi_dir)/lib/lnx-x64" ]
                 }
             } ],
-            [ "OS == 'mac' and target_arch == 'a64'", {
+            [ "OS == 'mac' and target_arch == 'arm64'", {
                 "copies": [ {
                     "destination":  "build/Release",
                     "files":        [ "<(ndi_dir)/lib/mac-a64/libndi.dylib" ]
