@@ -12,15 +12,15 @@
     "bugs":        { "url": "https://github.com/Streampunk/grandiose/issues" },
     "dependencies": {
         "bindings":         "1.5.0",
-        "got":              "11.8.6",
-        "mkdirp":           "1.0.4",
-        "tmp":              "0.2.1",
-        "execa":            "5.1.1",
-        "cross-zip":        "4.0.0",
-        "shelljs":          "0.8.5"
+        "got":              "14.4.7",
+        "mkdirp":           "3.0.1",
+        "tmp":              "0.2.3",
+        "execa":            "9.6.0",
+        "cross-zip":        "4.0.1",
+        "shelljs":          "0.10.0"
     },
     "devDependencies": {
-        "shx":              "0.3.4"
+        "shx":              "0.4.0"
     },
     "scripts": {
         "install":          "node ndi.js && node-gyp rebuild",
