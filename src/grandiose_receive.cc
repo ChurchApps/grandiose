@@ -879,7 +879,7 @@ void dataReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
       c->status = GRANDIOSE_CONNECTION_LOST;
       REJECT_STATUS;
       break;
-    case NDIlib_frame_type_status_change:
+    case NDIlib_frame_type_status_change: {
       napi_value result, param;
       c->status = napi_create_object(env, &result);
       REJECT_STATUS;
@@ -894,6 +894,23 @@ void dataReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
 
       tidyCarrier(env, c);
       break;
+    }
+    case NDIlib_frame_type_source_change: {
+      napi_value result, param;
+      c->status = napi_create_object(env, &result);
+      REJECT_STATUS;
+      c->status = napi_create_string_utf8(env, "sourceChange", NAPI_AUTO_LENGTH, &param);
+      REJECT_STATUS;
+      c->status = napi_set_named_property(env, result, "type", param);
+      REJECT_STATUS;
+
+      napi_status status;
+      status = napi_resolve_deferred(env, c->_deferred, result);
+      FLOATING_STATUS;
+
+      tidyCarrier(env, c);
+      break;
+    }
     case NDIlib_frame_type_none:
     case NDIlib_frame_type_max:
       break;
