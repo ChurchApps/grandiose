@@ -1,6 +1,7 @@
 {
     "variables": {
-      "ndi_dir": "<(module_root_dir)/ndi"
+      "ndi_dir": "<(module_root_dir)/ndi",
+      "openssl_fips": ""
     },
     "targets": [ {
         "target_name": "grandiose",
