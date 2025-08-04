@@ -59,39 +59,36 @@
                     "library_dirs": [ "<(ndi_dir)/lib/lnx-x64" ]
                 }
             } ],
-            [ "OS == 'linux' and target_arch == 'arm'", {
-                "copies": [ {
-                    "destination":  "build/Release",
-                    "files":        [ "<(ndi_dir)/lib/lnx-armv7l/libndi.so",
-                                      "<(ndi_dir)/lib/lnx-armv7l/libndi.so.6",
-                                      "<(ndi_dir)/lib/lnx-armv7l/libndi.so.6.2.0" ]
-                } ],
-                "link_settings": {
-                    "libraries":    [ "-Wl,-rpath,'$$ORIGIN'", "-lndi" ],
-                    "library_dirs": [ "<(ndi_dir)/lib/lnx-armv7l" ]
-                }
-            } ],
             [ "OS == 'linux' and target_arch == 'arm64'", {
                 "copies": [ {
                     "destination":  "build/Release",
-                    "files":        [ "<(ndi_dir)/lib/lnx-arm64/libndi.so",
-                                      "<(ndi_dir)/lib/lnx-arm64/libndi.so.6",
-                                      "<(ndi_dir)/lib/lnx-arm64/libndi.so.6.2.0" ]
+                    "files":        [ "<(ndi_dir)/lib/lnx-a64/libndi.so",
+                                      "<(ndi_dir)/lib/lnx-a64/libndi.so.6",
+                                      "<(ndi_dir)/lib/lnx-a64/libndi.so.6.2.0" ]
                 } ],
                 "link_settings": {
                     "libraries":    [ "-Wl,-rpath,'$$ORIGIN'", "-lndi" ],
-                    "library_dirs": [ "<(ndi_dir)/lib/lnx-arm64" ]
+                    "library_dirs": [ "<(ndi_dir)/lib/lnx-x64" ]
                 }
             } ],
-            [ "OS == 'mac' and (target_arch == 'x64' or target_arch == 'arm64')", {
+            [ "OS == 'mac' and target_arch == 'arm64'", {
                 "copies": [ {
                     "destination":  "build/Release",
-                    "files":        [ "<(ndi_dir)/lib/mac/libndi.dylib",
-                                      "<(ndi_dir)/lib/mac/libndi_licenses.txt" ]
+                    "files":        [ "<(ndi_dir)/lib/mac-a64/libndi.dylib" ]
                 } ],
                 "link_settings": {
                     "libraries":    [ "-Wl,-rpath,@loader_path", "-lndi" ],
-                    "library_dirs": [ "<(ndi_dir)/lib/mac" ]
+                    "library_dirs": [ "<(ndi_dir)/lib/mac-a64" ]
+                }
+            } ],
+            [ "OS == 'mac' and target_arch == 'x64'", {
+                "copies": [ {
+                    "destination":  "build/Release",
+                    "files":        [ "<(ndi_dir)/lib/mac-x64/libndi.dylib" ]
+                } ],
+                "link_settings": {
+                    "libraries":    [ "-Wl,-rpath,@loader_path", "-lndi" ],
+                    "library_dirs": [ "<(ndi_dir)/lib/mac-x64" ]
                 }
             } ]
         ]
