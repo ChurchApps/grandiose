@@ -14,6 +14,7 @@
 */
 
 #include <chrono>
+#include <cstring>
 #include <Processing.NDI.Lib.h>
 #include <inttypes.h>
 
@@ -37,6 +38,7 @@ void receiveExecute(napi_env env, void* data) {
   receiveCarrier* c = (receiveCarrier*) data;
 
   NDIlib_recv_create_v3_t receiveConfig;
+  memset(&receiveConfig, 0, sizeof(receiveConfig));  // Initialize config structure
   receiveConfig.color_format = c->colorFormat;
   receiveConfig.bandwidth = c->bandwidth;
   receiveConfig.allow_video_fields = c->allowVideoFields;
@@ -286,15 +288,33 @@ napi_value receive(napi_env env, napi_callback_info info) {
 void videoReceiveExecute(napi_env env, void* data) {
   dataCarrier* c = (dataCarrier*) data;
 
-  switch (NDIlib_recv_capture_v2(c->recv, &c->videoFrame, nullptr, nullptr, c->wait))
+  // Initialize the video frame structure to ensure all fields are zeroed
+  memset(&c->videoFrame, 0, sizeof(c->videoFrame));
+
+  // Add null check for receiver
+  if (!c->recv) {
+    c->status = GRANDIOSE_CONNECTION_LOST;
+    c->errorMsg = "NDI receiver is null or invalid.";
+    return;
+  }
+
+  NDIlib_frame_type_e frameType = NDIlib_recv_capture_v2(c->recv, &c->videoFrame, nullptr, nullptr, c->wait);
+
+  switch (frameType)
   {
     case NDIlib_frame_type_none:
       c->status = GRANDIOSE_NOT_FOUND;
       c->errorMsg = "No video data received in the requested time interval.";
       break;
 
-    // Video data
+    // Video data - this is what we want!
     case NDIlib_frame_type_video:
+      // Success - no error status set
+      break;
+
+    case 101: // NDIlib_frame_type_source_change - normal during connection
+      c->status = GRANDIOSE_NOT_FOUND;
+      c->errorMsg = "NDI source change detected - waiting for video data.";
       break;
 
     default:
@@ -305,12 +325,29 @@ void videoReceiveExecute(napi_env env, void* data) {
 }
 
 void videoReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
+  // Safety check for data pointer
+  if (!data) return;
+    
   dataCarrier* c = (dataCarrier*) data;
 
   if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "Async video frame receive failed to complete.";
   }
+  
+  // Handle non-success status cases
+  if (c->status != GRANDIOSE_SUCCESS) {
+    napi_value error_result;
+    napi_create_object(env, &error_result);
+    napi_value error_msg;
+    const char* msg = c->errorMsg.empty() ? "No video data available" : c->errorMsg.c_str();
+    napi_create_string_utf8(env, msg, NAPI_AUTO_LENGTH, &error_msg);
+    napi_set_named_property(env, error_result, "message", error_msg);
+    napi_reject_deferred(env, c->_deferred, error_result);
+    tidyCarrier(env, c);
+    return;
+  }
+  
   REJECT_STATUS;
 
   napi_value result;
@@ -462,6 +499,16 @@ napi_value videoReceive(napi_env env, napi_callback_info info) {
 
 void audioReceiveExecute(napi_env env, void* data) {
   dataCarrier* c = (dataCarrier*) data;
+
+  // Initialize the audio frame structure
+  memset(&c->audioFrame, 0, sizeof(c->audioFrame));
+
+  // Add null check for receiver
+  if (!c->recv) {
+    c->status = GRANDIOSE_CONNECTION_LOST;
+    c->errorMsg = "NDI receiver is null or invalid.";
+    return;
+  }
 
   switch (NDIlib_recv_capture_v2(c->recv, nullptr, &c->audioFrame, nullptr, c->wait))
   {
@@ -710,6 +757,16 @@ napi_value audioReceive(napi_env env, napi_callback_info info) {
 void metadataReceiveExecute(napi_env env, void* data) {
   dataCarrier* c = (dataCarrier*) data;
 
+  // Initialize the metadata frame structure
+  memset(&c->metadataFrame, 0, sizeof(c->metadataFrame));
+
+  // Add null check for receiver
+  if (!c->recv) {
+    c->status = GRANDIOSE_CONNECTION_LOST;
+    c->errorMsg = "NDI receiver is null or invalid.";
+    return;
+  }
+
   switch (NDIlib_recv_capture_v2(c->recv, nullptr, nullptr, &c->metadataFrame, c->wait))
   {
     case NDIlib_frame_type_none:
@@ -826,6 +883,18 @@ napi_value metadataReceive(napi_env env, napi_callback_info info) {
 
 void dataReceiveExecute(napi_env env, void* data) {
   dataCarrier* c = (dataCarrier*) data;
+
+  // Initialize all frame structures
+  memset(&c->videoFrame, 0, sizeof(c->videoFrame));
+  memset(&c->audioFrame, 0, sizeof(c->audioFrame));
+  memset(&c->metadataFrame, 0, sizeof(c->metadataFrame));
+
+  // Add null check for receiver
+  if (!c->recv) {
+    c->status = GRANDIOSE_CONNECTION_LOST;
+    c->errorMsg = "NDI receiver is null or invalid.";
+    return;
+  }
 
   c->frameType = NDIlib_recv_capture_v2(c->recv, &c->videoFrame, &c->audioFrame, &c->metadataFrame, c->wait);
   switch (c->frameType) {
