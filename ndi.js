@@ -90,15 +90,20 @@ import tmp from "tmp"
         await execa("cpio", [ "-idmu", "-F", path.join(dir1, "NDI_SDK_Component.pkg/Payload") ],
             { cwd: dir1, stdin: "inherit", stdout: "ignore", stderr: "ignore" })
 
+        /*  debug: list extracted files  */
+        console.log("-- debug: listing extracted files")
+        console.log("Contents of extraction directory:")
+        shell.exec(`find "${dir1}" -name "*.dylib" -o -name "*.h"`)
+
         /*  assemble NDI SDK subset  */
         console.log("-- assembling NDI SDK subset")
         shell.rm("-rf", "ndi")
         shell.mkdir("-p", "ndi/include")
         shell.mkdir("-p", "ndi/lib/mac-a64")
         shell.mkdir("-p", "ndi/lib/mac-x64")
-        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/include/*"), "ndi/include/")
-        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/lib/macOS/*"), "ndi/lib/mac-a64/")
-        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/lib/macOS/*"), "ndi/lib/mac-x64/")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/include/"), "ndi/include/")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/lib/macOS/"), "ndi/lib/mac-a64/")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/lib/macOS/"), "ndi/lib/mac-x64/")
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
@@ -128,10 +133,11 @@ import tmp from "tmp"
         shell.mkdir("-p", "ndi/include")
         shell.mkdir("-p", "ndi/lib/lnx-x86")
         shell.mkdir("-p", "ndi/lib/lnx-x64")
-        shell.mv(path.join(dir1, "NDI SDK for Linux/include/*.h"),                      "ndi/include/")
-        shell.mv(path.join(dir1, "NDI SDK for Linux/lib/i686-linux-gnu/*"),             "ndi/lib/lnx-x86/")
-        shell.mv(path.join(dir1, "NDI SDK for Linux/lib/x86_64-linux-gnu/*"),           "ndi/lib/lnx-x64/")
-        shell.mv(path.join(dir1, "NDI SDK for Linux/lib/aarch64-rpi4-linux-gnueabi/*"), "ndi/lib/lnx-a64/")
+        shell.mkdir("-p", "ndi/lib/lnx-a64")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Linux/include/*"),                      "ndi/include/")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Linux/lib/i686-linux-gnu/*"),             "ndi/lib/lnx-x86/")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Linux/lib/x86_64-linux-gnu/*"),           "ndi/lib/lnx-x64/")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Linux/lib/aarch64-rpi4-linux-gnueabi/*"), "ndi/lib/lnx-a64/")
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
