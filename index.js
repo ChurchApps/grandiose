@@ -80,15 +80,16 @@ let find = function (...args) {
   return addon.find.apply(null, args);
 }
 
-module.exports = {
-  version: addon.version,
-  isSupportedCPU: addon.isSupportedCPU,
-  initialize: addon.initialize,
-  destroy: addon.destroy,
-  find: find,
-  receive: addon.receive,
-  send: addon.send,
-  routing: addon.routing,
+export const version = addon.version;
+export const isSupportedCPU = addon.isSupportedCPU;
+export const initialize = addon.initialize;
+export const destroy = addon.destroy;
+export { find };
+export const receive = addon.receive;
+export const send = addon.send;
+export const routing = addon.routing;
+
+export {
   COLOR_FORMAT_BGRX_BGRA, COLOR_FORMAT_UYVY_BGRA,
   COLOR_FORMAT_RGBX_RGBA, COLOR_FORMAT_UYVY_RGBA,
   COLOR_FORMAT_BGRX_BGRA_FLIPPED, COLOR_FORMAT_FASTEST,
