@@ -15,15 +15,14 @@
 */
 
 /*  external requirements  */
-const fs        = require("fs")
-const path      = require("path")
-const os        = require("os")
-const shell     = require("shelljs")
-const { execa } = require("execa")
-const zip       = require("cross-zip")
-const { got }   = require("got")
-const mkdirp    = require("mkdirp")
-const tmp       = require("tmp")
+import fs from "fs"
+import path from "path"
+import os from "os"
+import shell from "shelljs"
+import { execa } from "execa"
+import zip from "cross-zip"
+import { got } from "got"
+import tmp from "tmp"
 
 /*  establish asynchronous environment  */
 ;(async () => {

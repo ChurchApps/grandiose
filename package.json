@@ -7,6 +7,7 @@
     "author":      "Streampunk Media et al",
     "license":     "Apache-2.0",
     "main":        "index.js",
+    "type":        "module",
     "gypfile":     true,
     "repository":  { "type": "git", "url": "git+https://github.com/Streampunk/grandiose.git" },
     "bugs":        { "url": "https://github.com/Streampunk/grandiose/issues" },
