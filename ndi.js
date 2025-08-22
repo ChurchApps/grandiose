@@ -102,24 +102,23 @@ import tmp from "tmp"
         shell.mkdir("-p", "ndi/lib/mac-a64")
         shell.mkdir("-p", "ndi/lib/mac-x64")
         
-        // Copy include files
-        const includeFiles = shell.ls(path.join(dir1, "NDI SDK for Apple/include/*.h"))
-        includeFiles.forEach(file => {
-            shell.cp(file, "ndi/include/")
-        })
+        // Copy include files using shell commands directly
+        console.log("-- copying include files")
+        shell.exec(`cp "${dir1}/NDI SDK for Apple/include"/*.h "ndi/include/"`)
         
         // Copy library files to both architectures
-        const libFiles = shell.ls(path.join(dir1, "NDI SDK for Apple/lib/macOS/*"))
-        libFiles.forEach(file => {
-            shell.cp(file, "ndi/lib/mac-a64/")
-            shell.cp(file, "ndi/lib/mac-x64/")
-        })
+        console.log("-- copying library files")
+        shell.exec(`cp "${dir1}/NDI SDK for Apple/lib/macOS"/* "ndi/lib/mac-a64/"`)
+        shell.exec(`cp "${dir1}/NDI SDK for Apple/lib/macOS"/* "ndi/lib/mac-x64/"`)
         
         // Debug: verify files were copied
         console.log("-- debug: verifying copied files")
-        console.log("Include files:", shell.ls("ndi/include/"))
-        console.log("mac-a64 files:", shell.ls("ndi/lib/mac-a64/"))
-        console.log("mac-x64 files:", shell.ls("ndi/lib/mac-x64/"))
+        console.log("Include files:")
+        shell.exec('ls -la "ndi/include/"')
+        console.log("mac-a64 files:")
+        shell.exec('ls -la "ndi/lib/mac-a64/"')
+        console.log("mac-x64 files:")
+        shell.exec('ls -la "ndi/lib/mac-x64/"')
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
@@ -158,34 +157,26 @@ import tmp from "tmp"
         shell.mkdir("-p", "ndi/lib/lnx-x64")
         shell.mkdir("-p", "ndi/lib/lnx-a64")
         
-        // Copy include files
-        const includeFiles = shell.ls(path.join(dir1, "NDI SDK for Linux/include/*.h"))
-        includeFiles.forEach(file => {
-            shell.cp(file, "ndi/include/")
-        })
+        // Copy include files using shell commands directly
+        console.log("-- copying include files")
+        shell.exec(`cp "${dir1}/NDI SDK for Linux/include"/*.h "ndi/include/" 2>/dev/null || echo "No include files found"`)
         
         // Copy library files for each architecture
-        const x86Files = shell.ls(path.join(dir1, "NDI SDK for Linux/lib/i686-linux-gnu/*")) || []
-        x86Files.forEach(file => {
-            shell.cp(file, "ndi/lib/lnx-x86/")
-        })
-        
-        const x64Files = shell.ls(path.join(dir1, "NDI SDK for Linux/lib/x86_64-linux-gnu/*")) || []
-        x64Files.forEach(file => {
-            shell.cp(file, "ndi/lib/lnx-x64/")
-        })
-        
-        const a64Files = shell.ls(path.join(dir1, "NDI SDK for Linux/lib/aarch64-rpi4-linux-gnueabi/*")) || []
-        a64Files.forEach(file => {
-            shell.cp(file, "ndi/lib/lnx-a64/")
-        })
+        console.log("-- copying library files")
+        shell.exec(`cp "${dir1}/NDI SDK for Linux/lib/i686-linux-gnu"/* "ndi/lib/lnx-x86/" 2>/dev/null || echo "No x86 lib files found"`)
+        shell.exec(`cp "${dir1}/NDI SDK for Linux/lib/x86_64-linux-gnu"/* "ndi/lib/lnx-x64/" 2>/dev/null || echo "No x64 lib files found"`)
+        shell.exec(`cp "${dir1}/NDI SDK for Linux/lib/aarch64-rpi4-linux-gnueabi"/* "ndi/lib/lnx-a64/" 2>/dev/null || echo "No a64 lib files found"`)
         
         // Debug: verify files were copied
         console.log("-- debug: verifying copied files")
-        console.log("Include files:", shell.ls("ndi/include/"))
-        console.log("lnx-x86 files:", shell.ls("ndi/lib/lnx-x86/"))
-        console.log("lnx-x64 files:", shell.ls("ndi/lib/lnx-x64/"))
-        console.log("lnx-a64 files:", shell.ls("ndi/lib/lnx-a64/"))
+        console.log("Include files:")
+        shell.exec('ls -la "ndi/include/" 2>/dev/null || echo "Include directory empty"')
+        console.log("lnx-x86 files:")
+        shell.exec('ls -la "ndi/lib/lnx-x86/" 2>/dev/null || echo "x86 directory empty"')
+        console.log("lnx-x64 files:")
+        shell.exec('ls -la "ndi/lib/lnx-x64/" 2>/dev/null || echo "x64 directory empty"')
+        console.log("lnx-a64 files:")
+        shell.exec('ls -la "ndi/lib/lnx-a64/" 2>/dev/null || echo "a64 directory empty"')
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
