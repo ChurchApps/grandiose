@@ -90,11 +90,6 @@ import tmp from "tmp"
         await execa("cpio", [ "-idmu", "-F", path.join(dir1, "NDI_SDK_Component.pkg/Payload") ],
             { cwd: dir1, stdin: "inherit", stdout: "ignore", stderr: "ignore" })
 
-        /*  debug: list extracted files  */
-        console.log("-- debug: listing extracted files")
-        console.log("Contents of extraction directory:")
-        shell.exec(`find "${dir1}" -name "*.dylib" -o -name "*.h"`)
-
         /*  assemble NDI SDK subset  */
         console.log("-- assembling NDI SDK subset")
         shell.rm("-rf", "ndi")
@@ -102,23 +97,18 @@ import tmp from "tmp"
         shell.mkdir("-p", "ndi/lib/mac-a64")
         shell.mkdir("-p", "ndi/lib/mac-x64")
         
-        // Copy include files using shell commands directly
-        console.log("-- copying include files")
-        shell.exec(`cp "${dir1}/NDI SDK for Apple/include"/*.h "ndi/include/"`)
+        // Use shell.cp with explicit error handling
+        console.log("-- copying NDI SDK files")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Apple", "include", "*.h"), "ndi/include/")
+        shell.cp(path.join(dir1, "NDI SDK for Apple", "lib", "macOS", "libndi.dylib"), "ndi/lib/mac-a64/")
+        shell.cp(path.join(dir1, "NDI SDK for Apple", "lib", "macOS", "libndi.dylib"), "ndi/lib/mac-x64/")
         
-        // Copy library files to both architectures
-        console.log("-- copying library files")
-        shell.exec(`cp "${dir1}/NDI SDK for Apple/lib/macOS"/* "ndi/lib/mac-a64/"`)
-        shell.exec(`cp "${dir1}/NDI SDK for Apple/lib/macOS"/* "ndi/lib/mac-x64/"`)
-        
-        // Debug: verify files were copied
-        console.log("-- debug: verifying copied files")
-        console.log("Include files:")
-        shell.exec('ls -la "ndi/include/"')
-        console.log("mac-a64 files:")
-        shell.exec('ls -la "ndi/lib/mac-a64/"')
-        console.log("mac-x64 files:")
-        shell.exec('ls -la "ndi/lib/mac-x64/"')
+        // Verify the critical file exists
+        if (!shell.test("-f", "ndi/lib/mac-a64/libndi.dylib")) {
+            console.log("ERROR: libndi.dylib not found in mac-a64 directory")
+            process.exit(1)
+        }
+        console.log("-- NDI SDK files copied successfully")
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
@@ -142,13 +132,6 @@ import tmp from "tmp"
         await execa("sh", [ "-c", `echo "y" | PAGER=cat sh Install_NDI_SDK_v6_Linux.sh` ],
             { cwd: dir1, stdin: "inherit", stdout: "ignore", stderr: "inherit" })
 
-        /*  debug: list extracted files  */
-        console.log("-- debug: listing extracted files")
-        console.log("Contents of extraction directory:")
-        shell.exec(`find "${dir1}" -name "*.so*" -o -name "*.h" | head -20`)
-        console.log("Library directories:")
-        shell.exec(`ls -la "${dir1}/NDI SDK for Linux/lib/" || echo "lib directory not found"`)
-
         /*  assemble NDI SDK subset  */
         console.log("-- assembling NDI SDK subset")
         shell.rm("-rf", "ndi")
@@ -157,26 +140,33 @@ import tmp from "tmp"
         shell.mkdir("-p", "ndi/lib/lnx-x64")
         shell.mkdir("-p", "ndi/lib/lnx-a64")
         
-        // Copy include files using shell commands directly
-        console.log("-- copying include files")
-        shell.exec(`cp "${dir1}/NDI SDK for Linux/include"/*.h "ndi/include/" 2>/dev/null || echo "No include files found"`)
+        // Use shell.cp with explicit paths and error handling
+        console.log("-- copying NDI SDK files")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Linux", "include", "*.h"), "ndi/include/")
         
-        // Copy library files for each architecture
-        console.log("-- copying library files")
-        shell.exec(`cp "${dir1}/NDI SDK for Linux/lib/i686-linux-gnu"/* "ndi/lib/lnx-x86/" 2>/dev/null || echo "No x86 lib files found"`)
-        shell.exec(`cp "${dir1}/NDI SDK for Linux/lib/x86_64-linux-gnu"/* "ndi/lib/lnx-x64/" 2>/dev/null || echo "No x64 lib files found"`)
-        shell.exec(`cp "${dir1}/NDI SDK for Linux/lib/aarch64-rpi4-linux-gnueabi"/* "ndi/lib/lnx-a64/" 2>/dev/null || echo "No a64 lib files found"`)
+        // Copy specific library files
+        const libPaths = [
+            { src: path.join(dir1, "NDI SDK for Linux", "lib", "i686-linux-gnu"), dest: "ndi/lib/lnx-x86/" },
+            { src: path.join(dir1, "NDI SDK for Linux", "lib", "x86_64-linux-gnu"), dest: "ndi/lib/lnx-x64/" },
+            { src: path.join(dir1, "NDI SDK for Linux", "lib", "aarch64-rpi4-linux-gnueabi"), dest: "ndi/lib/lnx-a64/" }
+        ]
         
-        // Debug: verify files were copied
-        console.log("-- debug: verifying copied files")
-        console.log("Include files:")
-        shell.exec('ls -la "ndi/include/" 2>/dev/null || echo "Include directory empty"')
-        console.log("lnx-x86 files:")
-        shell.exec('ls -la "ndi/lib/lnx-x86/" 2>/dev/null || echo "x86 directory empty"')
-        console.log("lnx-x64 files:")
-        shell.exec('ls -la "ndi/lib/lnx-x64/" 2>/dev/null || echo "x64 directory empty"')
-        console.log("lnx-a64 files:")
-        shell.exec('ls -la "ndi/lib/lnx-a64/" 2>/dev/null || echo "a64 directory empty"')
+        libPaths.forEach(({ src, dest }) => {
+            if (shell.test("-d", src)) {
+                shell.cp("-R", path.join(src, "*"), dest)
+            } else {
+                console.log(`Warning: ${src} directory not found`)
+            }
+        })
+        
+        // Verify critical ARM64 files exist
+        if (!shell.test("-f", "ndi/lib/lnx-a64/libndi.so")) {
+            console.log("ERROR: libndi.so not found in lnx-a64 directory")
+            console.log("Available ARM64 files:")
+            shell.exec('ls -la "ndi/lib/lnx-a64/" || echo "a64 directory empty"')
+            process.exit(1)
+        }
+        console.log("-- NDI SDK files copied successfully")
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
