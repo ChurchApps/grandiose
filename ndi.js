@@ -101,9 +101,25 @@ import tmp from "tmp"
         shell.mkdir("-p", "ndi/include")
         shell.mkdir("-p", "ndi/lib/mac-a64")
         shell.mkdir("-p", "ndi/lib/mac-x64")
-        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/include/*"), "ndi/include/")
-        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/lib/macOS/*"), "ndi/lib/mac-a64/")
-        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/lib/macOS/*"), "ndi/lib/mac-x64/")
+        
+        // Copy include files
+        const includeFiles = shell.ls(path.join(dir1, "NDI SDK for Apple/include/*.h"))
+        includeFiles.forEach(file => {
+            shell.cp(file, "ndi/include/")
+        })
+        
+        // Copy library files to both architectures
+        const libFiles = shell.ls(path.join(dir1, "NDI SDK for Apple/lib/macOS/*"))
+        libFiles.forEach(file => {
+            shell.cp(file, "ndi/lib/mac-a64/")
+            shell.cp(file, "ndi/lib/mac-x64/")
+        })
+        
+        // Debug: verify files were copied
+        console.log("-- debug: verifying copied files")
+        console.log("Include files:", shell.ls("ndi/include/"))
+        console.log("mac-a64 files:", shell.ls("ndi/lib/mac-a64/"))
+        console.log("mac-x64 files:", shell.ls("ndi/lib/mac-x64/"))
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
@@ -127,6 +143,13 @@ import tmp from "tmp"
         await execa("sh", [ "-c", `echo "y" | PAGER=cat sh Install_NDI_SDK_v6_Linux.sh` ],
             { cwd: dir1, stdin: "inherit", stdout: "ignore", stderr: "inherit" })
 
+        /*  debug: list extracted files  */
+        console.log("-- debug: listing extracted files")
+        console.log("Contents of extraction directory:")
+        shell.exec(`find "${dir1}" -name "*.so*" -o -name "*.h" | head -20`)
+        console.log("Library directories:")
+        shell.exec(`ls -la "${dir1}/NDI SDK for Linux/lib/" || echo "lib directory not found"`)
+
         /*  assemble NDI SDK subset  */
         console.log("-- assembling NDI SDK subset")
         shell.rm("-rf", "ndi")
@@ -134,10 +157,35 @@ import tmp from "tmp"
         shell.mkdir("-p", "ndi/lib/lnx-x86")
         shell.mkdir("-p", "ndi/lib/lnx-x64")
         shell.mkdir("-p", "ndi/lib/lnx-a64")
-        shell.cp("-R", path.join(dir1, "NDI SDK for Linux/include/*"),                      "ndi/include/")
-        shell.cp("-R", path.join(dir1, "NDI SDK for Linux/lib/i686-linux-gnu/*"),             "ndi/lib/lnx-x86/")
-        shell.cp("-R", path.join(dir1, "NDI SDK for Linux/lib/x86_64-linux-gnu/*"),           "ndi/lib/lnx-x64/")
-        shell.cp("-R", path.join(dir1, "NDI SDK for Linux/lib/aarch64-rpi4-linux-gnueabi/*"), "ndi/lib/lnx-a64/")
+        
+        // Copy include files
+        const includeFiles = shell.ls(path.join(dir1, "NDI SDK for Linux/include/*.h"))
+        includeFiles.forEach(file => {
+            shell.cp(file, "ndi/include/")
+        })
+        
+        // Copy library files for each architecture
+        const x86Files = shell.ls(path.join(dir1, "NDI SDK for Linux/lib/i686-linux-gnu/*")) || []
+        x86Files.forEach(file => {
+            shell.cp(file, "ndi/lib/lnx-x86/")
+        })
+        
+        const x64Files = shell.ls(path.join(dir1, "NDI SDK for Linux/lib/x86_64-linux-gnu/*")) || []
+        x64Files.forEach(file => {
+            shell.cp(file, "ndi/lib/lnx-x64/")
+        })
+        
+        const a64Files = shell.ls(path.join(dir1, "NDI SDK for Linux/lib/aarch64-rpi4-linux-gnueabi/*")) || []
+        a64Files.forEach(file => {
+            shell.cp(file, "ndi/lib/lnx-a64/")
+        })
+        
+        // Debug: verify files were copied
+        console.log("-- debug: verifying copied files")
+        console.log("Include files:", shell.ls("ndi/include/"))
+        console.log("lnx-x86 files:", shell.ls("ndi/lib/lnx-x86/"))
+        console.log("lnx-x64 files:", shell.ls("ndi/lib/lnx-x64/"))
+        console.log("lnx-a64 files:", shell.ls("ndi/lib/lnx-a64/"))
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
