@@ -96,9 +96,9 @@ import tmp from "tmp"
         shell.mkdir("-p", "ndi/include")
         shell.mkdir("-p", "ndi/lib/mac-a64")
         shell.mkdir("-p", "ndi/lib/mac-x64")
-        shell.mv(path.join(dir1, "NDI SDK for Apple/include/*.h"), "ndi/include/")
-        shell.mv(path.join(dir1, "NDI SDK for Apple/lib/macOS/*.dylib"), "ndi/lib/mac-a64/")
-        shell.mv(path.join(dir1, "NDI SDK for Apple/lib/macOS/*.dylib"), "ndi/lib/mac-x64/")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/include/*"), "ndi/include/")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/lib/macOS/*"), "ndi/lib/mac-a64/")
+        shell.cp("-R", path.join(dir1, "NDI SDK for Apple/lib/macOS/*"), "ndi/lib/mac-x64/")
 
         /*  remove temporary files  */
         console.log("-- removing temporary files")
