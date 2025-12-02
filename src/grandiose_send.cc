@@ -202,12 +202,18 @@ void sendComplete(napi_env env, napi_status asyncStatus, void* data) {
   // c->status = napi_set_named_property(env, result, "data", dataFn);
   // REJECT_STATUS;
 
-  // napi_value name, groups, clockVideo, clockAudio;
-  napi_value name, clockVideo, clockAudio;
+  napi_value name, groups, clockVideo, clockAudio;
   c->status = napi_create_string_utf8(env, c->name, NAPI_AUTO_LENGTH, &name);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "name", name);
   REJECT_STATUS;
+
+  if (c->groups != nullptr) {
+    c->status = napi_create_string_utf8(env, c->groups, NAPI_AUTO_LENGTH, &groups);
+    REJECT_STATUS;
+    c->status = napi_set_named_property(env, result, "groups", groups);
+    REJECT_STATUS;
+  }
 
   c->status = napi_get_boolean(env, c->clockVideo, &clockVideo);
   REJECT_STATUS;
@@ -253,8 +259,7 @@ napi_value send(napi_env env, napi_callback_info info) {
     GRANDIOSE_INVALID_ARGS);
 
   napi_value config = args[0];
-  // napi_value name, groups, clockVideo, clockAudio;
-  napi_value name, clockVideo, clockAudio;
+  napi_value name, groups, clockVideo, clockAudio;
 
   c->status = napi_get_named_property(env, config, "name", &name);
   REJECT_RETURN;
@@ -270,14 +275,20 @@ napi_value send(napi_env env, napi_callback_info info) {
   c->status = napi_get_value_string_utf8(env, name, c->name, namel + 1, &namel);
   REJECT_RETURN;
   
-  // c->status = napi_get_named_property(env, config, "groups", &groups);
-  // REJECT_RETURN;
-  // c->status = napi_typeof(env, groups, &type);
-  // REJECT_RETURN;
-  
-  // if (type != napi_undefined && type != napi_string) REJECT_ERROR_RETURN(
-  //   "Groups must be of type string or ....",
-  //   GRANDIOSE_INVALID_ARGS);
+  c->status = napi_get_named_property(env, config, "groups", &groups);
+  REJECT_RETURN;
+  c->status = napi_typeof(env, groups, &type);
+  if (type != napi_undefined) {
+    if (type != napi_string) REJECT_ERROR_RETURN(
+      "Groups property must be of type string.",
+      GRANDIOSE_INVALID_ARGS);
+    size_t groupsl;
+    c->status = napi_get_value_string_utf8(env, groups, nullptr, 0, &groupsl);
+    REJECT_RETURN;
+    c->groups = (char *) malloc(groupsl + 1);
+    c->status = napi_get_value_string_utf8(env, groups, c->groups, groupsl + 1, &groupsl);
+    REJECT_RETURN;
+  }
 
   c->status = napi_get_named_property(env, config, "clockVideo", &clockVideo);
   REJECT_RETURN;

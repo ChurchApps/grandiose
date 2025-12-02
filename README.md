@@ -15,7 +15,7 @@ of the original [Streampunk Grandiose](https://github.com/Streampunk/grandiose) 
 The differences against the original codebase are:
 
 - audio frame sending support from the [rse/grandiose](https://github.com/rse/grandiose) fork.
-- ad-hoc download of NDI SDK 6.2.0 from the [rse/grandiose](https://github.com/rse/grandiose) fork.
+- ad-hoc download of NDI SDK from the [rse/grandiose](https://github.com/rse/grandiose) fork.
 - portability fixes for clean compile under Windows, macOS and Linux from the [rse/grandiose](https://github.com/rse/grandiose) fork.
 - portability fixes for macOS from the [danjenkins/grandiose](https://github.com/danjenkins/grandiose) fork.
 - NDI Sender functionality from the [ianshade/grandiose](https://github.com/ianshade/grandiose) fork.
@@ -24,7 +24,7 @@ The differences against the original codebase are:
 
 ## Installation
 
-Grandiose supports the Windows/x86, Windows/x64, macOS/x64, Linux/x86 and Linux/x64 platforms at this time only.
+Grandiose supports the Windows/x86, Windows/x64, macOS/x64, macOS/arm64, Linux/x86, Linux/x64 and Linux/arm64 platforms at this time.
 
 Install [Node.js](http://nodejs.org/) for your platform. This software has been developed against the long term stable (LTS) release.
 
@@ -224,7 +224,15 @@ else if (dataFrame.type == 'metadata') { console.log(dataFrame.data); }
 
 ### Sending streams
 
-To follow.
+```javascript
+grandiose.send({
+  name: "Screen 1",
+  // Send source to specific groups. May be an array.
+  groups: "studio3",
+  clockVideo: false,
+  clockAudio: false,
+})
+```
 
 ### Other
 
@@ -237,10 +245,6 @@ To check if the installed CPU is supported for NDI(tm), use:
     grandiose.isSupportedCPU(); // e.g. true
 
 ## Status, support and further development
-
-Support for sending streams is in progress. Support for x86, Mac and Linux platforms is being considered.
-
-Although the architecture of grandiose is such that it could be used at scale in production environments, development is not yet complete. In its current state, it is recommended that this software is used in development environments and for building prototypes. Future development will make this more appropriate for production use.
 
 Contributions can be made via pull requests and will be considered by the author on their merits. Enhancement requests and bug reports should be raised as github issues. For support, please contact [Streampunk Media](http://www.streampunk.media/).
 

@@ -29,6 +29,7 @@ struct sendCarrier : carrier {
   NDIlib_send_instance_t send;
   ~sendCarrier() {
     free(name);
+    free(groups);
   }
 };
 

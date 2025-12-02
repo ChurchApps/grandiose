@@ -86,14 +86,30 @@ let find = function (...args) {
   return addon.find.apply(null, args);
 }
 
+let send = function (...args) {
+  if (args.length === 0) return addon.send();
+  if (Array.isArray(args[0].groups)) {
+    args[0].groups = args[0].groups.reduce((x, y) => x + ',' + y);
+  }
+  return addon.send.apply(null, args);
+}
+
+let routing = function (...args) {
+  if (args.length === 0) return addon.routing();
+  if (Array.isArray(args[0].groups)) {
+    args[0].groups = args[0].groups.reduce((x, y) => x + ',' + y);
+  }
+  return addon.routing.apply(null, args);
+}
+
 export const version = addon.version;
 export const isSupportedCPU = addon.isSupportedCPU;
 export const initialize = addon.initialize;
 export const destroy = addon.destroy;
 export { find };
 export const receive = addon.receive;
-export const send = addon.send;
-export const routing = addon.routing;
+export { send };
+export { routing };
 
 export {
   COLOR_FORMAT_BGRX_BGRA, COLOR_FORMAT_UYVY_BGRA,
