@@ -31,10 +31,14 @@ struct findCarrier: carrier {
     uint32_t no_sources = 0;
     const NDIlib_source_t *sources;
     ~findCarrier() {
-        if (groups != nullptr)
+        if (groups != nullptr) {
             free(groups);
-        if (extra_ips != nullptr)
+            groups = nullptr;
+        }
+        if (extra_ips != nullptr) {
             free(extra_ips);
+            extra_ips = nullptr;
+        }
     }
 };
 

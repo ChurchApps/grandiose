@@ -172,8 +172,10 @@ int32_t rejectStatus(napi_env env, carrier* c, const char* file, int32_t line) {
       FLOATING_STATUS;
       c->errorMsg = std::string(errorInfo->error_message);
     }
-    char* extMsg = (char *) malloc(sizeof(char) * c->errorMsg.length() + 200);
-    snprintf(extMsg, sizeof(char) * c->errorMsg.length() + 200, "In file %s on line %i, found error: %s", file, line, c->errorMsg.c_str());
+    // calculate buffer size: file path + line number + error message + format strings
+    size_t bufferSize = strlen(file) + c->errorMsg.length() + 250;
+    char* extMsg = (char *) malloc(bufferSize);
+    snprintf(extMsg, bufferSize, "In file %s on line %i, found error: %s", file, line, c->errorMsg.c_str());
     status = napi_create_string_utf8(env, custom_itoa(c->status, errorChars, 10),
       NAPI_AUTO_LENGTH, &errorCode);
     FLOATING_STATUS;
@@ -184,7 +186,7 @@ int32_t rejectStatus(napi_env env, carrier* c, const char* file, int32_t line) {
     status = napi_reject_deferred(env, c->_deferred, errorValue);
     FLOATING_STATUS;
 
-    //free(extMsg);
+    free(extMsg);
     tidyCarrier(env, c);
   }
   return c->status;

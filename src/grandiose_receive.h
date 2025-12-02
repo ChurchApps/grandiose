@@ -33,9 +33,19 @@ struct receiveCarrier : carrier {
   char* name = nullptr;
   NDIlib_recv_instance_t recv;
   ~receiveCarrier() {
-    free(name);
+    if (name != nullptr) {
+      free(name);
+      name = nullptr;
+    }
     if (source != nullptr) {
+      if (source->p_ndi_name != nullptr) {
+        free((void*)source->p_ndi_name);
+      }
+      if (source->p_url_address != nullptr) {
+        free((void*)source->p_url_address);
+      }
       delete source;
+      source = nullptr;
     }
   }
 };
@@ -51,9 +61,19 @@ struct dataCarrier : carrier {
   int32_t referenceLevel = 20;
   Grandiose_audio_format_e audioFormat = Grandiose_audio_format_float_32_separate;
   NDIlib_metadata_frame_t metadataFrame;
+  dataCarrier() {
+    audioFrame16s.p_data = nullptr;
+    audioFrame32fIlvd.p_data = nullptr;
+  }
   ~dataCarrier() {
-    delete[] audioFrame16s.p_data;
-    delete[] audioFrame32fIlvd.p_data;
+    if (audioFrame16s.p_data != nullptr) {
+      delete[] audioFrame16s.p_data;
+      audioFrame16s.p_data = nullptr;
+    }
+    if (audioFrame32fIlvd.p_data != nullptr) {
+      delete[] audioFrame32fIlvd.p_data;
+      audioFrame32fIlvd.p_data = nullptr;
+    }
   }
 };
 

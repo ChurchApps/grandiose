@@ -338,8 +338,11 @@ void videoSendComplete(napi_env env, napi_status asyncStatus, void* data) {
   napi_value result;
   napi_status status;
 
-  c->status = napi_delete_reference(env, c->sourceBufferRef);
-  REJECT_STATUS;
+  if (c->sourceBufferRef != nullptr) {
+    c->status = napi_delete_reference(env, c->sourceBufferRef);
+    c->sourceBufferRef = nullptr;
+    REJECT_STATUS;
+  }
 
   if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
@@ -372,6 +375,14 @@ napi_value videoSend(napi_env env, napi_callback_info info) {
   napi_value sendValue;
   c->status = napi_get_named_property(env, thisValue, "embedded", &sendValue);
   REJECT_RETURN;
+  
+  napi_valuetype sendType;
+  c->status = napi_typeof(env, sendValue, &sendType);
+  REJECT_RETURN;
+  if (sendType != napi_external) REJECT_ERROR_RETURN(
+    "NDI sender has been destroyed",
+    GRANDIOSE_INVALID_ARGS);
+  
   void* sendData;
   c->status = napi_get_value_external(env, sendValue, &sendData);
   c->send = (NDIlib_send_instance_t) sendData;
@@ -550,8 +561,11 @@ void audioSendComplete(napi_env env, napi_status asyncStatus, void* data) {
   napi_value result;
   napi_status status;
 
-  c->status = napi_delete_reference(env, c->sourceBufferRef);
-  REJECT_STATUS;
+  if (c->sourceBufferRef != nullptr) {
+    c->status = napi_delete_reference(env, c->sourceBufferRef);
+    c->sourceBufferRef = nullptr;
+    REJECT_STATUS;
+  }
 
   if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
@@ -584,6 +598,14 @@ napi_value audioSend(napi_env env, napi_callback_info info) {
   napi_value sendValue;
   c->status = napi_get_named_property(env, thisValue, "embedded", &sendValue);
   REJECT_RETURN;
+  
+  napi_valuetype sendType;
+  c->status = napi_typeof(env, sendValue, &sendType);
+  REJECT_RETURN;
+  if (sendType != napi_external) REJECT_ERROR_RETURN(
+    "NDI sender has been destroyed",
+    GRANDIOSE_INVALID_ARGS);
+  
   void* sendData;
   c->status = napi_get_value_external(env, sendValue, &sendData);
   c->send = (NDIlib_send_instance_t) sendData;

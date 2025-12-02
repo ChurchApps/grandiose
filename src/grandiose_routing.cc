@@ -255,11 +255,11 @@ napi_value routing_destroy(napi_env env, napi_callback_info info) {
         NDIlib_routing_instance_t routing = (NDIlib_routing_instance_t)(embeddedData->value);
 
         /*  call the NDI API  */
-        NDIlib_routing_destroy(routing);
+        if (routing != nullptr)
+            NDIlib_routing_destroy(routing);
 
         /*  indicate to finalizeRouting that the NDI routing native object is already destroyed  */
         embeddedData->value = nullptr;
-        REJECT_RETURN;
     }
 
     /*  resolve promise  */
@@ -267,6 +267,7 @@ napi_value routing_destroy(napi_env env, napi_callback_info info) {
     napi_get_undefined(env, &undefined);
     napi_resolve_deferred(env, c->_deferred, undefined);
 
+    delete c;
     return promise;
 }
 
@@ -290,7 +291,11 @@ napi_value routing_change(napi_env env, napi_callback_info info) {
     CHECK_STATUS;
     NDIlib_routing_instance_t routing = (NDIlib_routing_instance_t)(embeddedData->value);
 
-    /*  fetch source argument  */
+    /*  check if routing was already destroyed  */
+    if (routing == nullptr)
+        NAPI_THROW_ERROR("NDI routing object has been destroyed");
+
+    /*  fetch argument  */
     if (argc != (size_t)1)
         NAPI_THROW_ERROR("Missing source argument");
     napi_value source = args[0];
@@ -359,6 +364,10 @@ napi_value routing_clear(napi_env env, napi_callback_info info) {
     CHECK_STATUS;
     NDIlib_routing_instance_t routing = (NDIlib_routing_instance_t)(embeddedData->value);
     
+    /*  check if routing was already destroyed  */
+    if (routing == nullptr)
+        NAPI_THROW_ERROR("NDI routing object has been destroyed");
+    
     /*  call NDI API functionality  */
     int ok = NDIlib_routing_clear(routing);
 
@@ -390,6 +399,10 @@ napi_value routing_connections(napi_env env, napi_callback_info info) {
     CHECK_STATUS;
     NDIlib_routing_instance_t routing = (NDIlib_routing_instance_t)(embeddedData->value);
    
+    /*  check if routing was already destroyed  */
+    if (routing == nullptr)
+        NAPI_THROW_ERROR("NDI routing object has been destroyed");
+   
     /*  call NDI API functionality  */
     int conns = NDIlib_routing_get_no_connections(routing, 0);
 
@@ -420,6 +433,10 @@ napi_value routing_sourcename(napi_env env, napi_callback_info info) {
     status = napi_get_value_external(env, embeddedValue, (void **)&embeddedData);
     CHECK_STATUS;
     NDIlib_routing_instance_t routing = (NDIlib_routing_instance_t)(embeddedData->value);
+   
+    /*  check if routing was already destroyed  */
+    if (routing == nullptr)
+        NAPI_THROW_ERROR("NDI routing object has been destroyed");
    
     /*  call NDI API functionality  */
     const NDIlib_source_t *source = NDIlib_routing_get_source_name(routing);

@@ -236,11 +236,11 @@ napi_value find_destroy(napi_env env, napi_callback_info info) {
         NDIlib_find_instance_t find = (NDIlib_find_instance_t)(embeddedData->value);
 
         /*  call the NDI API  */
-        NDIlib_find_destroy(find);
+        if (find != nullptr)
+            NDIlib_find_destroy(find);
 
         /*  indicate to finalizeFind that the NDI find native object is already destroyed  */
         embeddedData->value = nullptr;
-        REJECT_RETURN;
     }
 
     /*  resolve promise  */
@@ -248,6 +248,7 @@ napi_value find_destroy(napi_env env, napi_callback_info info) {
     napi_get_undefined(env, &undefined);
     napi_resolve_deferred(env, c->_deferred, undefined);
 
+    delete c;
     return promise;
 }
 
@@ -270,6 +271,10 @@ napi_value find_sources(napi_env env, napi_callback_info info) {
     status = napi_get_value_external(env, embeddedValue, (void **)&embeddedData);
     CHECK_STATUS;
     NDIlib_find_instance_t find = (NDIlib_find_instance_t)(embeddedData->value);
+    
+    /*  check if find was already destroyed  */
+    if (find == nullptr)
+        NAPI_THROW_ERROR("NDI find object has been destroyed");
    
     /*  call NDI API functionality  */
     uint32_t no_sources;
@@ -318,6 +323,10 @@ napi_value find_wait(napi_env env, napi_callback_info info) {
     status = napi_get_value_external(env, embeddedValue, (void **)&embeddedData);
     CHECK_STATUS;
     NDIlib_find_instance_t find = (NDIlib_find_instance_t)(embeddedData->value);
+
+    /*  check if find was already destroyed  */
+    if (find == nullptr)
+        NAPI_THROW_ERROR("NDI find object has been destroyed");
 
     /*  handle optional "wait" argument  */
     uint32_t wait = 10000;

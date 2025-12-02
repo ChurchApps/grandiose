@@ -28,8 +28,14 @@ struct sendCarrier : carrier {
   bool clockAudio = false;
   NDIlib_send_instance_t send;
   ~sendCarrier() {
-    free(name);
-    free(groups);
+    if (name != nullptr) {
+      free(name);
+      name = nullptr;
+    }
+    if (groups != nullptr) {
+      free(groups);
+      groups = nullptr;
+    }
   }
 };
 
@@ -40,7 +46,8 @@ struct sendDataCarrier : carrier {
   NDIlib_metadata_frame_t metadataFrame;
   napi_ref sourceBufferRef = nullptr;
   ~sendDataCarrier() {
-    // TODO: free sourceBufferRef
+    // sourceBufferRef is cleaned up in completion callbacks (videoSendComplete/audioSendComplete)
+    // and set to nullptr to prevent double-free
   }
 };
 

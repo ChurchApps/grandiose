@@ -104,7 +104,7 @@ void receiveComplete(napi_env env, napi_status asyncStatus, void* data) {
   napi_value source, name, uri;
   c->status = napi_create_string_utf8(env, c->source->p_ndi_name, NAPI_AUTO_LENGTH, &name);
   REJECT_STATUS;
-  if (c->source->p_url_address != NULL) {
+  if (c->source->p_url_address != nullptr) {
     c->status = napi_create_string_utf8(env, c->source->p_url_address, NAPI_AUTO_LENGTH, &uri);
     REJECT_STATUS;
   }
@@ -523,10 +523,20 @@ void audioReceiveExecute(napi_env env, void* data) {
         case Grandiose_audio_format_int_16_interleaved:
           c->audioFrame16s.reference_level = c->referenceLevel;
           c->audioFrame16s.p_data = new short[c->audioFrame.no_samples * c->audioFrame.no_channels];
+          if (c->audioFrame16s.p_data == nullptr) {
+            c->status = GRANDIOSE_ALLOCATION_FAILURE;
+            c->errorMsg = "Failed to allocate memory for audio conversion.";
+            return;
+          }
           NDIlib_util_audio_to_interleaved_16s_v2(&c->audioFrame, &c->audioFrame16s);
           break;
         case Grandiose_audio_format_float_32_interleaved:
           c->audioFrame32fIlvd.p_data = new float[c->audioFrame.no_samples * c->audioFrame.no_channels];
+          if (c->audioFrame32fIlvd.p_data == nullptr) {
+            c->status = GRANDIOSE_ALLOCATION_FAILURE;
+            c->errorMsg = "Failed to allocate memory for audio conversion.";
+            return;
+          }
           NDIlib_util_audio_to_interleaved_32f_v2(&c->audioFrame, &c->audioFrame32fIlvd);
           break;
         case Grandiose_audio_format_float_32_separate:
@@ -549,6 +559,12 @@ void audioReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
     c->status = asyncStatus;
     c->errorMsg = "Async audio frame receive failed to complete.";
   }
+  
+  // Free NDI audio frame on error to prevent leak
+  if (c->status != GRANDIOSE_SUCCESS && c->audioFrame.p_data != nullptr) {
+    NDIlib_recv_free_audio_v2(c->recv, &c->audioFrame);
+  }
+  
   REJECT_STATUS;
 
   napi_value result;
@@ -905,10 +921,20 @@ void dataReceiveExecute(napi_env env, void* data) {
         case Grandiose_audio_format_int_16_interleaved:
           c->audioFrame16s.reference_level = c->referenceLevel;
           c->audioFrame16s.p_data = new short[c->audioFrame.no_samples * c->audioFrame.no_channels];
+          if (c->audioFrame16s.p_data == nullptr) {
+            c->status = GRANDIOSE_ALLOCATION_FAILURE;
+            c->errorMsg = "Failed to allocate memory for audio conversion.";
+            return;
+          }
           NDIlib_util_audio_to_interleaved_16s_v2(&c->audioFrame, &c->audioFrame16s);
           break;
         case Grandiose_audio_format_float_32_interleaved:
           c->audioFrame32fIlvd.p_data = new float[c->audioFrame.no_samples * c->audioFrame.no_channels];
+          if (c->audioFrame32fIlvd.p_data == nullptr) {
+            c->status = GRANDIOSE_ALLOCATION_FAILURE;
+            c->errorMsg = "Failed to allocate memory for audio conversion.";
+            return;
+          }
           NDIlib_util_audio_to_interleaved_32f_v2(&c->audioFrame, &c->audioFrame32fIlvd);
           break;
         case Grandiose_audio_format_float_32_separate:

@@ -27,10 +27,14 @@ struct routingCarrier: carrier {
     char* groups = nullptr;
     NDIlib_routing_instance_t routing;
     ~routingCarrier() {
-        if (name != nullptr)
+        if (name != nullptr) {
             free(name);
-        if (groups != nullptr)
+            name = nullptr;
+        }
+        if (groups != nullptr) {
             free(groups);
+            groups = nullptr;
+        }
     }
 };
 
