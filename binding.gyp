@@ -36,11 +36,11 @@
                 }
             } ],
             [ "OS == 'linux' and target_arch == 'ia32'", {
-                "copies": [ {
-                    "destination":  "build/Release",
-                    "files":        [ "<(ndi_dir)/lib/lnx-x86/libndi.so",
-                                      "<(ndi_dir)/lib/lnx-x86/libndi.so.6",
-                                      "<(ndi_dir)/lib/lnx-x86/libndi.so.6.3.1" ]
+                "actions": [ {
+                    "action_name": "prepare_ndi_libs",
+                    "inputs": [ "copy-libndi-lnx.js" ],
+                    "outputs": [ "build/Release/.ndi-prepared" ],
+                    "action": [ "node", "copy-libndi-lnx.js" ]
                 } ],
                 "link_settings": {
                     "libraries":    [ "-Wl,-rpath,'$$ORIGIN'", "-lndi" ],
@@ -48,11 +48,11 @@
                 }
             } ],
             [ "OS == 'linux' and target_arch == 'x64'", {
-                "copies": [ {
-                    "destination":  "build/Release",
-                    "files":        [ "<(ndi_dir)/lib/lnx-x64/libndi.so",
-                                      "<(ndi_dir)/lib/lnx-x64/libndi.so.6",
-                                      "<(ndi_dir)/lib/lnx-x64/libndi.so.6.3.1" ]
+                "actions": [ {
+                    "action_name": "prepare_ndi_libs",
+                    "inputs": [ "copy-libndi-lnx.js" ],
+                    "outputs": [ "build/Release/.ndi-prepared" ],
+                    "action": [ "node", "copy-libndi-lnx.js" ]
                 } ],
                 "link_settings": {
                     "libraries":    [ "-Wl,-rpath,'$$ORIGIN'", "-lndi" ],
@@ -60,11 +60,11 @@
                 }
             } ],
             [ "OS == 'linux' and target_arch == 'arm64'", {
-                "copies": [ {
-                    "destination":  "build/Release",
-                    "files":        [ "<(ndi_dir)/lib/lnx-a64/libndi.so",
-                                      "<(ndi_dir)/lib/lnx-a64/libndi.so.6",
-                                      "<(ndi_dir)/lib/lnx-a64/libndi.so.6.3.1" ]
+                "actions": [ {
+                    "action_name": "prepare_ndi_libs",
+                    "inputs": [ "copy-libndi-lnx.js" ],
+                    "outputs": [ "build/Release/.ndi-prepared" ],
+                    "action": [ "node", "copy-libndi-lnx.js" ]
                 } ],
                 "link_settings": {
                     "libraries":    [ "-Wl,-rpath,'$$ORIGIN'", "-lndi" ],

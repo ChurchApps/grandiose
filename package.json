@@ -1,6 +1,6 @@
 {
     "name":        "grandiose",
-    "version":     "6.31.0",
+    "version":     "1.0.0",
     "description": "Node.JS native bindings to the Newtek NDI SDK.",
     "homepage":    "https://github.com/Streampunk/grandiose#readme",
     "keywords":    [ "Newtek", "NDI", "network", "device", "interface" ],
@@ -15,7 +15,7 @@
         "bindings":         "1.5.0",
         "got":              "14.4.7",
         "mkdirp":           "3.0.1",
-        "tmp":              "0.2.3",
+        "tmp":              "0.2.5",
         "execa":            "9.6.0",
         "cross-zip":        "4.0.1",
         "shelljs":          "0.10.0"

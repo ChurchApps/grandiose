@@ -37,8 +37,7 @@ void finalizeReceive(napi_env env, void* data, void* hint) {
 void receiveExecute(napi_env env, void* data) {
   receiveCarrier* c = (receiveCarrier*) data;
 
-  NDIlib_recv_create_v3_t receiveConfig;
-  memset(&receiveConfig, 0, sizeof(receiveConfig));  // Initialize config structure
+  NDIlib_recv_create_v3_t receiveConfig{};  // Value-initialize config structure
   receiveConfig.color_format = c->colorFormat;
   receiveConfig.bandwidth = c->bandwidth;
   receiveConfig.allow_video_fields = c->allowVideoFields;
@@ -288,8 +287,8 @@ napi_value receive(napi_env env, napi_callback_info info) {
 void videoReceiveExecute(napi_env env, void* data) {
   dataCarrier* c = (dataCarrier*) data;
 
-  // Initialize the video frame structure to ensure all fields are zeroed
-  memset(&c->videoFrame, 0, sizeof(c->videoFrame));
+  // Value-initialize the video frame structure
+  c->videoFrame = NDIlib_video_frame_v2_t{};
 
   // Add null check for receiver
   if (!c->recv) {
@@ -500,8 +499,8 @@ napi_value videoReceive(napi_env env, napi_callback_info info) {
 void audioReceiveExecute(napi_env env, void* data) {
   dataCarrier* c = (dataCarrier*) data;
 
-  // Initialize the audio frame structure
-  memset(&c->audioFrame, 0, sizeof(c->audioFrame));
+  // Value-initialize the audio frame structure
+  c->audioFrame = NDIlib_audio_frame_v2_t{};
 
   // Add null check for receiver
   if (!c->recv) {
@@ -773,8 +772,8 @@ napi_value audioReceive(napi_env env, napi_callback_info info) {
 void metadataReceiveExecute(napi_env env, void* data) {
   dataCarrier* c = (dataCarrier*) data;
 
-  // Initialize the metadata frame structure
-  memset(&c->metadataFrame, 0, sizeof(c->metadataFrame));
+  // Value-initialize the metadata frame structure
+  c->metadataFrame = NDIlib_metadata_frame_t{};
 
   // Add null check for receiver
   if (!c->recv) {
@@ -900,10 +899,10 @@ napi_value metadataReceive(napi_env env, napi_callback_info info) {
 void dataReceiveExecute(napi_env env, void* data) {
   dataCarrier* c = (dataCarrier*) data;
 
-  // Initialize all frame structures
-  memset(&c->videoFrame, 0, sizeof(c->videoFrame));
-  memset(&c->audioFrame, 0, sizeof(c->audioFrame));
-  memset(&c->metadataFrame, 0, sizeof(c->metadataFrame));
+  // Value-initialize all frame structures
+  c->videoFrame = NDIlib_video_frame_v2_t{};
+  c->audioFrame = NDIlib_audio_frame_v2_t{};
+  c->metadataFrame = NDIlib_metadata_frame_t{};
 
   // Add null check for receiver
   if (!c->recv) {
