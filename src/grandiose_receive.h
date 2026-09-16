@@ -16,10 +16,18 @@
 #ifndef GRANDIOSE_RECEIVE_H
 #define GRANDIOSE_RECEIVE_H
 
+#include <mutex>
 #include "node_api.h"
 #include "grandiose_util.h"
 
+/* wrapper structure for embedded receive value */
+typedef struct embeddedReceiveValue {
+    void *value = nullptr;
+    std::mutex captureMutex;
+} embeddedReceiveValue_t;
+
 napi_value receive(napi_env env, napi_callback_info info);
+napi_value destroyReceive(napi_env env, napi_callback_info info);
 napi_value videoReceive(napi_env env, napi_callback_info info);
 napi_value audioReceive(napi_env env, napi_callback_info info);
 napi_value metadataReceive(napi_env env, napi_callback_info info);
@@ -31,7 +39,7 @@ struct receiveCarrier : carrier {
   NDIlib_recv_bandwidth_e bandwidth = NDIlib_recv_bandwidth_highest;
   bool allowVideoFields = true;
   char* name = nullptr;
-  NDIlib_recv_instance_t recv;
+  NDIlib_recv_instance_t recv = nullptr;
   ~receiveCarrier() {
     if (name != nullptr) {
       free(name);
@@ -52,7 +60,8 @@ struct receiveCarrier : carrier {
 
 struct dataCarrier : carrier {
   uint32_t wait = 10000;
-  NDIlib_recv_instance_t recv;
+  NDIlib_recv_instance_t recv = nullptr;
+  embeddedReceiveValue_t* embedded = nullptr;
   NDIlib_frame_type_e frameType;
   NDIlib_video_frame_v2_t videoFrame;
   NDIlib_audio_frame_v2_t audioFrame;

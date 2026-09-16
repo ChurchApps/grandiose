@@ -119,6 +119,7 @@ export interface Source {
 
 export interface Receiver {
   embedded: unknown
+  destroy: () => Promise<void>
   video: (timeout?: number) => Promise<VideoFrame>
   audio: (params: {
     audioFormat: AudioFormat

@@ -26,12 +26,64 @@
 #endif // _WIN64
 #endif // _WIN32
 
+#include <mutex>
 #include "grandiose_receive.h"
 #include "grandiose_util.h"
 #include "grandiose_find.h"
 
 void finalizeReceive(napi_env env, void* data, void* hint) {
-  NDIlib_recv_destroy((NDIlib_recv_instance_t) data);
+  embeddedReceiveValue_t *embeddedValue = (embeddedReceiveValue_t *)data;
+  if (embeddedValue != nullptr) {
+    NDIlib_recv_instance_t recv = nullptr;
+    {
+      std::lock_guard<std::mutex> lock(embeddedValue->captureMutex);
+      recv = (NDIlib_recv_instance_t)(embeddedValue->value);
+      embeddedValue->value = nullptr;
+    }
+    if (recv != nullptr) {
+      NDIlib_recv_destroy(recv);
+    }
+    delete embeddedValue;
+  }
+}
+
+napi_value destroyReceive(napi_env env, napi_callback_info info) {
+  carrier *c = new carrier;
+  napi_value promise;
+  c->status = napi_create_promise(env, &c->_deferred, &promise);
+  REJECT_RETURN;
+
+  napi_value thisValue;
+  c->status = napi_get_cb_info(env, info, nullptr, nullptr, &thisValue, nullptr);
+  REJECT_RETURN;
+
+  napi_value recvValue;
+  c->status = napi_get_named_property(env, thisValue, "embedded", &recvValue);
+  REJECT_RETURN;
+
+  napi_valuetype result;
+  c->status = napi_typeof(env, recvValue, &result);
+  REJECT_RETURN;
+
+  if (result == napi_external) {
+    embeddedReceiveValue_t *embeddedData;
+    c->status = napi_get_value_external(env, recvValue, (void **)&embeddedData);
+    REJECT_RETURN;
+    if (embeddedData != nullptr) {
+      std::lock_guard<std::mutex> lock(embeddedData->captureMutex);
+      if (embeddedData->value != nullptr) {
+        NDIlib_recv_destroy((NDIlib_recv_instance_t)embeddedData->value);
+        embeddedData->value = nullptr;
+      }
+    }
+  }
+
+  napi_value undefined;
+  napi_get_undefined(env, &undefined);
+  napi_resolve_deferred(env, c->_deferred, undefined);
+
+  delete c;
+  return promise;
 }
 
 void receiveExecute(napi_env env, void* data) {
@@ -67,9 +119,18 @@ void receiveComplete(napi_env env, napi_status asyncStatus, void* data) {
   REJECT_STATUS;
 
   napi_value embedded;
-  c->status = napi_create_external(env, c->recv, finalizeReceive, nullptr, &embedded);
+  embeddedReceiveValue_t *embeddedValue = new embeddedReceiveValue_t();
+  embeddedValue->value = c->recv;
+  c->status = napi_create_external(env, embeddedValue, finalizeReceive, nullptr, &embedded);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "embedded", embedded);
+  REJECT_STATUS;
+
+  napi_value destroyFn;
+  c->status = napi_create_function(env, "destroy", NAPI_AUTO_LENGTH, destroyReceive,
+    nullptr, &destroyFn);
+  REJECT_STATUS;
+  c->status = napi_set_named_property(env, result, "destroy", destroyFn);
   REJECT_STATUS;
 
   napi_value videoFn;
@@ -291,13 +352,21 @@ void videoReceiveExecute(napi_env env, void* data) {
   c->videoFrame = NDIlib_video_frame_v2_t{};
 
   // Add null check for receiver
-  if (!c->recv) {
+  if (!c->embedded || !c->embedded->value) {
     c->status = GRANDIOSE_CONNECTION_LOST;
-    c->errorMsg = "NDI receiver is null or invalid.";
+    c->errorMsg = "NDI receiver is null or has been destroyed.";
     return;
   }
 
-  NDIlib_frame_type_e frameType = NDIlib_recv_capture_v2(c->recv, &c->videoFrame, nullptr, nullptr, c->wait);
+  std::lock_guard<std::mutex> lock(c->embedded->captureMutex);
+  if (!c->embedded->value) {
+    c->status = GRANDIOSE_CONNECTION_LOST;
+    c->errorMsg = "NDI receiver has been destroyed.";
+    return;
+  }
+
+  NDIlib_frame_type_e frameType = NDIlib_recv_capture_v2(
+    (NDIlib_recv_instance_t)c->embedded->value, &c->videoFrame, nullptr, nullptr, c->wait);
 
   switch (frameType)
   {
@@ -336,6 +405,9 @@ void videoReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
   
   // Handle non-success status cases
   if (c->status != GRANDIOSE_SUCCESS) {
+    if (c->videoFrame.p_data != nullptr && c->embedded && c->embedded->value) {
+      NDIlib_recv_free_video_v2((NDIlib_recv_instance_t)c->embedded->value, &c->videoFrame);
+    }
     napi_value error_result;
     napi_create_object(env, &error_result);
     napi_value error_msg;
@@ -412,9 +484,9 @@ void videoReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
   c->status = napi_set_named_property(env, result, "frameFormatType", param);
   REJECT_STATUS;
 
-  c->status = napi_create_int32(env, (int32_t) c->videoFrame.timecode / 10000000, &params);
+  c->status = napi_create_int32(env, (int32_t) (c->videoFrame.timecode / 10000000), &params);
   REJECT_STATUS;
-  c->status = napi_create_int32(env, (c->videoFrame.timecode % 10000000) * 100, &paramn);
+  c->status = napi_create_int32(env, (int32_t) (c->videoFrame.timecode % 10000000) * 100, &paramn);
   REJECT_STATUS;
   c->status = napi_create_array(env, &param);
   REJECT_STATUS;
@@ -437,14 +509,25 @@ void videoReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
     REJECT_STATUS;
   }
 
-  c->status = napi_create_buffer_copy(env,
-    c->videoFrame.line_stride_in_bytes * c->videoFrame.yres,
-    (void*) c->videoFrame.p_data, nullptr, &param);
-  REJECT_STATUS;
+  int stride = std::abs(c->videoFrame.line_stride_in_bytes);
+  if (!stride) stride = c->videoFrame.xres * 4;
+  size_t videoDataSize = (size_t)stride * (size_t)std::max(0, c->videoFrame.yres);
+
+  if (videoDataSize > 0 && c->videoFrame.p_data != nullptr) {
+    c->status = napi_create_buffer_copy(env,
+      videoDataSize,
+      (void*) c->videoFrame.p_data, nullptr, &param);
+    REJECT_STATUS;
+  } else {
+    c->status = napi_create_buffer(env, 0, nullptr, &param);
+    REJECT_STATUS;
+  }
   c->status = napi_set_named_property(env, result, "data", param);
   REJECT_STATUS;
 
-  NDIlib_recv_free_video_v2(c->recv, &c->videoFrame);
+  if (c->embedded && c->embedded->value) {
+    NDIlib_recv_free_video_v2((NDIlib_recv_instance_t)c->embedded->value, &c->videoFrame);
+  }
 
   napi_status status;
   status = napi_resolve_deferred(env, c->_deferred, result);
@@ -470,9 +553,15 @@ napi_value videoReceive(napi_env env, napi_callback_info info) {
   napi_value recvValue;
   c->status = napi_get_named_property(env, thisValue, "embedded", &recvValue);
   REJECT_RETURN;
-  void* recvData;
-  c->status = napi_get_value_external(env, recvValue, &recvData);
-  c->recv = (NDIlib_recv_instance_t) recvData;
+  embeddedReceiveValue_t *embeddedData;
+  c->status = napi_get_value_external(env, recvValue, (void **)&embeddedData);
+  REJECT_RETURN;
+  if (embeddedData == nullptr || embeddedData->value == nullptr) {
+    REJECT_ERROR_RETURN("NDI receiver has been destroyed", GRANDIOSE_INVALID_ARGS);
+  }
+  c->recv = (NDIlib_recv_instance_t) embeddedData->value;
+  c->embedded = embeddedData;
+  c->status = napi_create_reference(env, thisValue, 1, &c->passthru);
   REJECT_RETURN;
 
   if (argc >= 1) {
@@ -503,13 +592,20 @@ void audioReceiveExecute(napi_env env, void* data) {
   c->audioFrame = NDIlib_audio_frame_v2_t{};
 
   // Add null check for receiver
-  if (!c->recv) {
+  if (!c->embedded || !c->embedded->value) {
     c->status = GRANDIOSE_CONNECTION_LOST;
-    c->errorMsg = "NDI receiver is null or invalid.";
+    c->errorMsg = "NDI receiver is null or has been destroyed.";
     return;
   }
 
-  switch (NDIlib_recv_capture_v2(c->recv, nullptr, &c->audioFrame, nullptr, c->wait))
+  std::lock_guard<std::mutex> lock(c->embedded->captureMutex);
+  if (!c->embedded->value) {
+    c->status = GRANDIOSE_CONNECTION_LOST;
+    c->errorMsg = "NDI receiver has been destroyed.";
+    return;
+  }
+
+  switch (NDIlib_recv_capture_v2((NDIlib_recv_instance_t)c->embedded->value, nullptr, &c->audioFrame, nullptr, c->wait))
   {
     case NDIlib_frame_type_none:
       c->status = GRANDIOSE_NOT_FOUND;
@@ -521,22 +617,26 @@ void audioReceiveExecute(napi_env env, void* data) {
       switch (c->audioFormat) {
         case Grandiose_audio_format_int_16_interleaved:
           c->audioFrame16s.reference_level = c->referenceLevel;
-          c->audioFrame16s.p_data = new short[c->audioFrame.no_samples * c->audioFrame.no_channels];
-          if (c->audioFrame16s.p_data == nullptr) {
-            c->status = GRANDIOSE_ALLOCATION_FAILURE;
-            c->errorMsg = "Failed to allocate memory for audio conversion.";
-            return;
+          if (c->audioFrame.no_samples > 0 && c->audioFrame.no_channels > 0) {
+            c->audioFrame16s.p_data = new short[c->audioFrame.no_samples * c->audioFrame.no_channels];
+            if (c->audioFrame16s.p_data == nullptr) {
+              c->status = GRANDIOSE_ALLOCATION_FAILURE;
+              c->errorMsg = "Failed to allocate memory for audio conversion.";
+              return;
+            }
+            NDIlib_util_audio_to_interleaved_16s_v2(&c->audioFrame, &c->audioFrame16s);
           }
-          NDIlib_util_audio_to_interleaved_16s_v2(&c->audioFrame, &c->audioFrame16s);
           break;
         case Grandiose_audio_format_float_32_interleaved:
-          c->audioFrame32fIlvd.p_data = new float[c->audioFrame.no_samples * c->audioFrame.no_channels];
-          if (c->audioFrame32fIlvd.p_data == nullptr) {
-            c->status = GRANDIOSE_ALLOCATION_FAILURE;
-            c->errorMsg = "Failed to allocate memory for audio conversion.";
-            return;
+          if (c->audioFrame.no_samples > 0 && c->audioFrame.no_channels > 0) {
+            c->audioFrame32fIlvd.p_data = new float[c->audioFrame.no_samples * c->audioFrame.no_channels];
+            if (c->audioFrame32fIlvd.p_data == nullptr) {
+              c->status = GRANDIOSE_ALLOCATION_FAILURE;
+              c->errorMsg = "Failed to allocate memory for audio conversion.";
+              return;
+            }
+            NDIlib_util_audio_to_interleaved_32f_v2(&c->audioFrame, &c->audioFrame32fIlvd);
           }
-          NDIlib_util_audio_to_interleaved_32f_v2(&c->audioFrame, &c->audioFrame32fIlvd);
           break;
         case Grandiose_audio_format_float_32_separate:
         default:
@@ -561,7 +661,9 @@ void audioReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
   
   // Free NDI audio frame on error to prevent leak
   if (c->status != GRANDIOSE_SUCCESS && c->audioFrame.p_data != nullptr) {
-    NDIlib_recv_free_audio_v2(c->recv, &c->audioFrame);
+    if (c->embedded && c->embedded->value) {
+      NDIlib_recv_free_audio_v2((NDIlib_recv_instance_t)c->embedded->value, &c->audioFrame);
+    }
   }
   
   REJECT_STATUS;
@@ -660,15 +762,29 @@ void audioReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
       rawFloats = (char*) c->audioFrame.p_data;
       break;
   }
-  c->status = napi_create_buffer_copy(env,
-    (c->audioFrame.channel_stride_in_bytes / factor) * c->audioFrame.no_channels,
-    rawFloats, nullptr, &param);
-  REJECT_STATUS;
+
+  size_t audioDataSize = 0;
+  if (c->audioFrame.no_samples > 0 && c->audioFrame.no_channels > 0) {
+    int bytesPerSample = (c->audioFormat == Grandiose_audio_format_int_16_interleaved) ? 2 : 4;
+    audioDataSize = (size_t)c->audioFrame.no_samples * (size_t)c->audioFrame.no_channels * bytesPerSample;
+  }
+
+  if (audioDataSize > 0 && rawFloats != nullptr) {
+    c->status = napi_create_buffer_copy(env,
+      audioDataSize,
+      rawFloats, nullptr, &param);
+    REJECT_STATUS;
+  } else {
+    c->status = napi_create_buffer(env, 0, nullptr, &param);
+    REJECT_STATUS;
+  }
 
   c->status = napi_set_named_property(env, result, "data", param);
   REJECT_STATUS;
 
-  NDIlib_recv_free_audio_v2(c->recv, &c->audioFrame);
+  if (c->embedded && c->embedded->value) {
+    NDIlib_recv_free_audio_v2((NDIlib_recv_instance_t)c->embedded->value, &c->audioFrame);
+  }
 
   napi_status status;
   status = napi_resolve_deferred(env, c->_deferred, result);
@@ -696,9 +812,15 @@ napi_value dataAndAudioReceive(napi_env env, napi_callback_info info,
   napi_value recvValue;
   c->status = napi_get_named_property(env, thisValue, "embedded", &recvValue);
   REJECT_RETURN;
-  void* recvData;
-  c->status = napi_get_value_external(env, recvValue, &recvData);
-  c->recv = (NDIlib_recv_instance_t) recvData;
+  embeddedReceiveValue_t *embeddedData;
+  c->status = napi_get_value_external(env, recvValue, (void **)&embeddedData);
+  REJECT_RETURN;
+  if (embeddedData == nullptr || embeddedData->value == nullptr) {
+    REJECT_ERROR_RETURN("NDI receiver has been destroyed", GRANDIOSE_INVALID_ARGS);
+  }
+  c->recv = (NDIlib_recv_instance_t) embeddedData->value;
+  c->embedded = embeddedData;
+  c->status = napi_create_reference(env, thisValue, 1, &c->passthru);
   REJECT_RETURN;
 
   if (argc >= 1) {
@@ -776,13 +898,20 @@ void metadataReceiveExecute(napi_env env, void* data) {
   c->metadataFrame = NDIlib_metadata_frame_t{};
 
   // Add null check for receiver
-  if (!c->recv) {
+  if (!c->embedded || !c->embedded->value) {
     c->status = GRANDIOSE_CONNECTION_LOST;
-    c->errorMsg = "NDI receiver is null or invalid.";
+    c->errorMsg = "NDI receiver is null or has been destroyed.";
     return;
   }
 
-  switch (NDIlib_recv_capture_v2(c->recv, nullptr, nullptr, &c->metadataFrame, c->wait))
+  std::lock_guard<std::mutex> lock(c->embedded->captureMutex);
+  if (!c->embedded->value) {
+    c->status = GRANDIOSE_CONNECTION_LOST;
+    c->errorMsg = "NDI receiver has been destroyed.";
+    return;
+  }
+
+  switch (NDIlib_recv_capture_v2((NDIlib_recv_instance_t)c->embedded->value, nullptr, nullptr, &c->metadataFrame, c->wait))
   {
     case NDIlib_frame_type_none:
       c->status = GRANDIOSE_NOT_FOUND;
@@ -798,7 +927,6 @@ void metadataReceiveExecute(napi_env env, void* data) {
       c->errorMsg = "Non-metadata payload received on metadata capture.";
       break;
   }
-
 }
 
 void metadataReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
@@ -808,6 +936,13 @@ void metadataReceiveComplete(napi_env env, napi_status asyncStatus, void* data) 
     c->status = asyncStatus;
     c->errorMsg = "Async metadata payload receive failed to complete.";
   }
+
+  if (c->status != GRANDIOSE_SUCCESS && c->metadataFrame.p_data != nullptr) {
+    if (c->embedded && c->embedded->value) {
+      NDIlib_recv_free_metadata((NDIlib_recv_instance_t)c->embedded->value, &c->metadataFrame);
+    }
+  }
+
   REJECT_STATUS;
 
   napi_value result;
@@ -839,12 +974,15 @@ void metadataReceiveComplete(napi_env env, napi_status asyncStatus, void* data) 
   c->status = napi_set_named_property(env, result, "timecode", param);
   REJECT_STATUS;
 
-  c->status = napi_create_string_utf8(env, c->metadataFrame.p_data, NAPI_AUTO_LENGTH, &param);
+  const char* metaStr = (c->metadataFrame.p_data != nullptr) ? c->metadataFrame.p_data : "";
+  c->status = napi_create_string_utf8(env, metaStr, NAPI_AUTO_LENGTH, &param);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "data", param);
   REJECT_STATUS;
 
-  NDIlib_recv_free_metadata(c->recv, &c->metadataFrame);
+  if (c->metadataFrame.p_data != nullptr && c->embedded && c->embedded->value) {
+    NDIlib_recv_free_metadata((NDIlib_recv_instance_t)c->embedded->value, &c->metadataFrame);
+  }
 
   napi_status status;
   status = napi_resolve_deferred(env, c->_deferred, result);
@@ -870,9 +1008,15 @@ napi_value metadataReceive(napi_env env, napi_callback_info info) {
   napi_value recvValue;
   c->status = napi_get_named_property(env, thisValue, "embedded", &recvValue);
   REJECT_RETURN;
-  void* recvData;
-  c->status = napi_get_value_external(env, recvValue, &recvData);
-  c->recv = (NDIlib_recv_instance_t) recvData;
+  embeddedReceiveValue_t *embeddedData;
+  c->status = napi_get_value_external(env, recvValue, (void **)&embeddedData);
+  REJECT_RETURN;
+  if (embeddedData == nullptr || embeddedData->value == nullptr) {
+    REJECT_ERROR_RETURN("NDI receiver has been destroyed", GRANDIOSE_INVALID_ARGS);
+  }
+  c->recv = (NDIlib_recv_instance_t) embeddedData->value;
+  c->embedded = embeddedData;
+  c->status = napi_create_reference(env, thisValue, 1, &c->passthru);
   REJECT_RETURN;
 
   if (argc >= 1) {
@@ -905,36 +1049,48 @@ void dataReceiveExecute(napi_env env, void* data) {
   c->metadataFrame = NDIlib_metadata_frame_t{};
 
   // Add null check for receiver
-  if (!c->recv) {
+  if (!c->embedded || !c->embedded->value) {
     c->status = GRANDIOSE_CONNECTION_LOST;
-    c->errorMsg = "NDI receiver is null or invalid.";
+    c->errorMsg = "NDI receiver is null or has been destroyed.";
     return;
   }
 
-  c->frameType = NDIlib_recv_capture_v2(c->recv, &c->videoFrame, &c->audioFrame, &c->metadataFrame, c->wait);
-  switch (c->frameType) {
+  std::lock_guard<std::mutex> lock(c->embedded->captureMutex);
+  if (!c->embedded->value) {
+    c->status = GRANDIOSE_CONNECTION_LOST;
+    c->errorMsg = "NDI receiver has been destroyed.";
+    return;
+  }
 
+  c->frameType = NDIlib_recv_capture_v2(
+    (NDIlib_recv_instance_t)c->embedded->value, &c->videoFrame, &c->audioFrame, &c->metadataFrame, c->wait);
+
+  switch (c->frameType) {
     // Audio data
     case NDIlib_frame_type_audio:
       switch (c->audioFormat) {
         case Grandiose_audio_format_int_16_interleaved:
           c->audioFrame16s.reference_level = c->referenceLevel;
-          c->audioFrame16s.p_data = new short[c->audioFrame.no_samples * c->audioFrame.no_channels];
-          if (c->audioFrame16s.p_data == nullptr) {
-            c->status = GRANDIOSE_ALLOCATION_FAILURE;
-            c->errorMsg = "Failed to allocate memory for audio conversion.";
-            return;
+          if (c->audioFrame.no_samples > 0 && c->audioFrame.no_channels > 0) {
+            c->audioFrame16s.p_data = new short[c->audioFrame.no_samples * c->audioFrame.no_channels];
+            if (c->audioFrame16s.p_data == nullptr) {
+              c->status = GRANDIOSE_ALLOCATION_FAILURE;
+              c->errorMsg = "Failed to allocate memory for audio conversion.";
+              return;
+            }
+            NDIlib_util_audio_to_interleaved_16s_v2(&c->audioFrame, &c->audioFrame16s);
           }
-          NDIlib_util_audio_to_interleaved_16s_v2(&c->audioFrame, &c->audioFrame16s);
           break;
         case Grandiose_audio_format_float_32_interleaved:
-          c->audioFrame32fIlvd.p_data = new float[c->audioFrame.no_samples * c->audioFrame.no_channels];
-          if (c->audioFrame32fIlvd.p_data == nullptr) {
-            c->status = GRANDIOSE_ALLOCATION_FAILURE;
-            c->errorMsg = "Failed to allocate memory for audio conversion.";
-            return;
+          if (c->audioFrame.no_samples > 0 && c->audioFrame.no_channels > 0) {
+            c->audioFrame32fIlvd.p_data = new float[c->audioFrame.no_samples * c->audioFrame.no_channels];
+            if (c->audioFrame32fIlvd.p_data == nullptr) {
+              c->status = GRANDIOSE_ALLOCATION_FAILURE;
+              c->errorMsg = "Failed to allocate memory for audio conversion.";
+              return;
+            }
+            NDIlib_util_audio_to_interleaved_32f_v2(&c->audioFrame, &c->audioFrame32fIlvd);
           }
-          NDIlib_util_audio_to_interleaved_32f_v2(&c->audioFrame, &c->audioFrame32fIlvd);
           break;
         case Grandiose_audio_format_float_32_separate:
         default:
@@ -942,11 +1098,10 @@ void dataReceiveExecute(napi_env env, void* data) {
       }
       break;
 
-      // Handle all other types on completion
-      default:
-        break;
+    // Handle all other types on completion
+    default:
+      break;
   }
-
 }
 
 void dataReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
@@ -1006,7 +1161,15 @@ void dataReceiveComplete(napi_env env, napi_status asyncStatus, void* data) {
       break;
     }
     case NDIlib_frame_type_none:
+      c->errorMsg = "No data received in the requested time interval.";
+      c->status = GRANDIOSE_NOT_FOUND;
+      REJECT_STATUS;
+      break;
     case NDIlib_frame_type_max:
+    default:
+      c->errorMsg = "Unknown or unsupported NDI frame type received.";
+      c->status = GRANDIOSE_ASYNC_FAILURE;
+      REJECT_STATUS;
       break;
   }
 }
