@@ -46,12 +46,7 @@ struct receiveCarrier : carrier {
       name = nullptr;
     }
     if (source != nullptr) {
-      if (source->p_ndi_name != nullptr) {
-        free((void*)source->p_ndi_name);
-      }
-      if (source->p_url_address != nullptr) {
-        free((void*)source->p_url_address);
-      }
+      freeNativeSource(source);
       delete source;
       source = nullptr;
     }

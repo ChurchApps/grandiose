@@ -287,16 +287,19 @@ napi_value find_sources(napi_env env, napi_callback_info info) {
     napi_value item;
     for (uint32_t i = 0; i < no_sources; i++) {
         napi_value name, uri;
-        status = napi_create_string_utf8(env, sources[i].p_ndi_name, NAPI_AUTO_LENGTH, &name);
-        CHECK_STATUS;
-        status = napi_create_string_utf8(env, sources[i].p_url_address, NAPI_AUTO_LENGTH, &uri);
+        const char* pName = sources[i].p_ndi_name != nullptr ? sources[i].p_ndi_name : "";
+        status = napi_create_string_utf8(env, pName, NAPI_AUTO_LENGTH, &name);
         CHECK_STATUS;
         status = napi_create_object(env, &item);
         CHECK_STATUS;
         status = napi_set_named_property(env, item, "name", name);
         CHECK_STATUS;
-        status = napi_set_named_property(env, item, "urlAddress", uri);
-        CHECK_STATUS;
+        if (sources[i].p_url_address != nullptr) {
+            status = napi_create_string_utf8(env, sources[i].p_url_address, NAPI_AUTO_LENGTH, &uri);
+            CHECK_STATUS;
+            status = napi_set_named_property(env, item, "urlAddress", uri);
+            CHECK_STATUS;
+        }
         status = napi_set_element(env, result, i, item);
         CHECK_STATUS;
     }

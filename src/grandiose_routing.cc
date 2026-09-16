@@ -326,15 +326,15 @@ napi_value routing_change(napi_env env, napi_callback_info info) {
         NAPI_THROW_ERROR("Source 'urlAddress' sub-property must be of type string.")
   
     /*  create NDI native source object  */
-    NDIlib_source_t *ndi_source = new NDIlib_source_t();
-    status = makeNativeSource(env, source, ndi_source);
+    NDIlib_source_t ndi_source;
+    status = makeNativeSource(env, source, &ndi_source);
     CHECK_STATUS;
   
     /*  call NDI API functionality  */
-    int ok = NDIlib_routing_change(routing, ndi_source);
+    int ok = NDIlib_routing_change(routing, &ndi_source);
   
     /*  cleanup resource  */
-    delete ndi_source;
+    freeNativeSource(&ndi_source);
   
     /*  return a boolean result  */
     napi_value result;
@@ -440,10 +440,11 @@ napi_value routing_sourcename(napi_env env, napi_callback_info info) {
    
     /*  call NDI API functionality  */
     const NDIlib_source_t *source = NDIlib_routing_get_source_name(routing);
+    const char* sourceName = (source != nullptr && source->p_ndi_name != nullptr) ? source->p_ndi_name : "";
 
     /*  return a string result  */
     napi_value result;
-    status = napi_create_string_utf8(env, source->p_ndi_name, NAPI_AUTO_LENGTH, &result);
+    status = napi_create_string_utf8(env, sourceName, NAPI_AUTO_LENGTH, &result);
     CHECK_STATUS;
    
     return result;

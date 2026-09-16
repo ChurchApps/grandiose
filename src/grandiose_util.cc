@@ -244,14 +244,30 @@ bool validAudioFormat(Grandiose_audio_format_e format) {
   }
 }
 
+void freeNativeSource(NDIlib_source_t *source) {
+  if (source != nullptr) {
+    if (source->p_ndi_name != nullptr) {
+      free((void*)source->p_ndi_name);
+      source->p_ndi_name = nullptr;
+    }
+    if (source->p_url_address != nullptr) {
+      free((void*)source->p_url_address);
+      source->p_url_address = nullptr;
+    }
+  }
+}
+
 // Make a native source object from components of a source object
 napi_status makeNativeSource(napi_env env, napi_value source, NDIlib_source_t *result) {
-  const char* name = nullptr;
-  const char* url = nullptr;
+  char* name = nullptr;
+  char* url = nullptr;
   napi_status status;
   napi_valuetype type;
   napi_value namev, urlv;
-  size_t namel, urll;
+  size_t namel = 0, urll = 0;
+
+  result->p_ndi_name = nullptr;
+  result->p_url_address = nullptr;
 
   status = napi_get_named_property(env, source, "name", &namev);
   PASS_STATUS;
@@ -264,18 +280,36 @@ napi_status makeNativeSource(napi_env env, napi_value source, NDIlib_source_t *r
     status = napi_get_value_string_utf8(env, namev, nullptr, 0, &namel);
     PASS_STATUS;
     name = (char *) malloc(namel + 1);
-    status = napi_get_value_string_utf8(env, namev, (char*) name, namel + 1, &namel);
-    PASS_STATUS;
+    if (name == nullptr) return napi_generic_failure;
+    status = napi_get_value_string_utf8(env, namev, name, namel + 1, &namel);
+    if (status != napi_ok) {
+      free(name);
+      return status;
+    }
   }
 
   status = napi_typeof(env, urlv, &type);
-  PASS_STATUS;
+  if (status != napi_ok) {
+    if (name != nullptr) free(name);
+    return status;
+  }
   if (type == napi_string) {
     status = napi_get_value_string_utf8(env, urlv, nullptr, 0, &urll);
-    PASS_STATUS;
+    if (status != napi_ok) {
+      if (name != nullptr) free(name);
+      return status;
+    }
     url = (char *) malloc(urll + 1);
-    status = napi_get_value_string_utf8(env, urlv, (char*) url, urll + 1, &urll);
-    PASS_STATUS;
+    if (url == nullptr) {
+      if (name != nullptr) free(name);
+      return napi_generic_failure;
+    }
+    status = napi_get_value_string_utf8(env, urlv, url, urll + 1, &urll);
+    if (status != napi_ok) {
+      if (name != nullptr) free(name);
+      free(url);
+      return status;
+    }
   }
 
   result->p_ndi_name = name;
